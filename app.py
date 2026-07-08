@@ -184,14 +184,25 @@ encoders = meta['encoders']
 
 with st.chat_message("assistant"):
     st.write("임상 데이터 CSV를 업로드해주세요.")
-    uploaded = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed")
-    if uploaded is not None and st.session_state.get('confirmed_file_id') != uploaded.file_id:
-        if st.button("다음 →", key=f"proceed_{uploaded.file_id}"):
-            st.session_state['confirmed_file_id'] = uploaded.file_id
+    new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed")
+    if new_upload is not None and st.session_state.get('uploaded_file_id') != new_upload.file_id:
+        # 새 파일이 들어온 시점에 내용을 세션에 통째로 복사 -> 이후엔 위젯이 아니라 이 값만 참조
+        st.session_state['uploaded_bytes'] = new_upload.getvalue()
+        st.session_state['uploaded_name'] = new_upload.name
+        st.session_state['uploaded_file_id'] = new_upload.file_id
+        st.session_state['confirmed_file_id'] = None  # 새 파일이면 확인 상태 초기화
+
+    up_file_id = st.session_state.get('uploaded_file_id')
+    up_name = st.session_state.get('uploaded_name')
+
+    if up_file_id and st.session_state.get('confirmed_file_id') != up_file_id:
+        if st.button("다음 →", key=f"proceed_{up_file_id}"):
+            st.session_state['confirmed_file_id'] = up_file_id
             st.rerun()
 
-if uploaded is not None and st.session_state.get('confirmed_file_id') == uploaded.file_id:
-    user_df = pd.read_csv(uploaded)
+if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
+    import io
+    user_df = pd.read_csv(io.BytesIO(st.session_state['uploaded_bytes']))
 
     # ── P3-5 간이 스키마 체크 (예측에는 실제 결과 데이터가 필요 없으므로 임상변수 16개만 필수) ──
     missing_cols = [c for c in CORE_COLS if c not in user_df.columns]
@@ -252,15 +263,15 @@ if uploaded is not None and st.session_state.get('confirmed_file_id') == uploade
 
         avg_risk = result_df['질병사망_위험도'].mean()
         st.session_state['last_result'] = {
-            'type': '예측', 'file_id': uploaded.file_id,
+            'type': '예측', 'file_id': up_file_id,
             'result_df': result_df, 'avg_risk': avg_risk, 'time_horizon': time_horizon,
         }
 
-        save_key = f"saved_{uploaded.file_id}_예측_{time_horizon}"
+        save_key = f"saved_{up_file_id}_예측_{time_horizon}"
         if not st.session_state.get(save_key, False):
             record = {
                 "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
-                "filename": uploaded.name, "title": uploaded.name, "purpose": "예측",
+                "filename": up_name, "title": up_name, "purpose": "예측",
                 "n_patients": len(user_df), "avg_risk": float(avg_risk),
             }
             if IS_LOGGED_IN:
@@ -287,16 +298,16 @@ if uploaded is not None and st.session_state.get('confirmed_file_id') == uploade
         row = cph.summary.loc[compare_col]
         hr, p = row['exp(coef)'], row['p']
         st.session_state['last_result'] = {
-            'type': '효과비교', 'file_id': uploaded.file_id, 'compare_col': compare_col,
+            'type': '효과비교', 'file_id': up_file_id, 'compare_col': compare_col,
             'hr': hr, 'p': p, 'summary': cph.summary[['coef', 'exp(coef)', 'p']],
             'missing_note': missing_note,
         }
 
-        save_key = f"saved_{uploaded.file_id}_효과비교_{compare_col}"
+        save_key = f"saved_{up_file_id}_효과비교_{compare_col}"
         if not st.session_state.get(save_key, False):
             record = {
                 "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
-                "filename": uploaded.name, "title": uploaded.name, "purpose": "효과비교",
+                "filename": up_name, "title": up_name, "purpose": "효과비교",
                 "n_patients": len(user_df), "hr_variable": compare_col,
                 "hr_value": float(hr), "p_value": float(p),
             }
@@ -312,7 +323,7 @@ if uploaded is not None and st.session_state.get('confirmed_file_id') == uploade
 
     # ── 결과 표시 (제출 직후든, 그 다음 재실행이든 항상 세션에 저장된 최신 결과를 보여줌) ──
     lr = st.session_state.get('last_result')
-    if lr and lr.get('file_id') == uploaded.file_id:
+    if lr and lr.get('file_id') == up_file_id:
         with st.chat_message("assistant"):
             if lr['type'] == '예측':
                 st.write("**Engine1 (통합 신경망)** 으로 개별 위험도를 예측했어요.")
