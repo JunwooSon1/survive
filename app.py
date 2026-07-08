@@ -66,13 +66,15 @@ with st.sidebar:
                 st.session_state[f"show_{rid}"] = not st.session_state.get(f"show_{rid}", False)
         with col_menu:
             if editable_db:
-                with st.popover("⋮", type="tertiary"):
+                ui_v = st.session_state.get('history_ui_version', 0)
+                with st.popover("⋮", type="tertiary", key=f"popover_{rid}_{ui_v}"):
                     if st.session_state.get(f"renaming_{rid}", False):
                         new_title = st.text_input("새 이름", value=display_title, key=f"rename_{rid}",
                                                     label_visibility="collapsed")
                         if st.button("저장", key=f"savebtn_{rid}", type="tertiary"):
                             supabase.table("analysis_history").update({"title": new_title}).eq("id", rid).execute()
                             st.session_state[f"renaming_{rid}"] = False
+                            st.session_state['history_ui_version'] = ui_v + 1  # 팝업 상태 강제 초기화
                             st.rerun()
                     else:
                         if st.button("✏️ 이름 변경", key=f"renamebtn_{rid}", use_container_width=True, type="tertiary"):
@@ -80,6 +82,7 @@ with st.sidebar:
                             st.rerun()
                         if st.button("🗑 삭제", key=f"delbtn_{rid}", use_container_width=True, type="tertiary"):
                             supabase.table("analysis_history").delete().eq("id", rid).execute()
+                            st.session_state['history_ui_version'] = ui_v + 1  # 팝업 상태 강제 초기화
                             st.rerun()
 
         if st.session_state.get(f"show_{rid}", False):
@@ -168,7 +171,9 @@ CORE_CATEGORICAL = meta['CORE_CATEGORICAL']
 DUR, EVT = meta['DUR'], meta['EVT']
 encoders = meta['encoders']
 
-uploaded = st.file_uploader("임상 데이터 CSV 업로드", type='csv')
+with st.chat_message("assistant"):
+    st.write("임상 데이터 CSV를 업로드해주세요.")
+    uploaded = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed")
 
 if uploaded is not None:
     user_df = pd.read_csv(uploaded)
@@ -176,11 +181,10 @@ if uploaded is not None:
     # ── P3-5 간이 스키마 체크 (예측에는 실제 결과 데이터가 필요 없으므로 임상변수 16개만 필수) ──
     missing_cols = [c for c in CORE_COLS if c not in user_df.columns]
     if missing_cols:
-        st.error(f"다음 컬럼이 없어 이 데이터는 처리할 수 없습니다: {missing_cols}\n"
-                 f"(이 시스템은 METABRIC 임상변수 16개 스키마 전용입니다)")
+        with st.chat_message("assistant"):
+            st.error(f"다음 컬럼이 없어 이 데이터는 처리할 수 없습니다: {missing_cols}\n"
+                     f"(이 시스템은 METABRIC 임상변수 16개 스키마 전용입니다)")
         st.stop()
-
-    st.success(f"스키마 확인 완료 — {len(user_df)}명 데이터 로드됨")
 
     # ── 범주형 인코딩 (학습 시 매핑 그대로 재사용) ──
     encoded_df = user_df.copy()
@@ -189,133 +193,134 @@ if uploaded is not None:
         encoded_df[col] = encoded_df[col].map(encoders[col])
         if encoded_df[col].isna().any():
             unseen_flag = True
-    if unseen_flag:
-        st.warning("일부 범주형 값이 학습 데이터에 없던 값입니다 — 해당 값은 결측으로 처리됩니다.")
 
-    purpose = st.radio("분석 목적을 선택하세요", ["개별 위험도 예측", "치료 효과 유의성 비교"])
+    submitted = False
+    with st.chat_message("assistant"):
+        st.write(f"스키마 확인 완료 — {len(user_df)}명 데이터 로드됐어요.")
+        if unseen_flag:
+            st.write("⚠️ 일부 범주형 값이 학습 데이터에 없던 값이라 결측으로 처리했어요.")
+        st.write("어떤 걸 도와드릴까요?")
+        purpose = st.radio("분석 목적을 선택하세요", ["개별 위험도 예측", "치료 효과 유의성 비교"],
+                            label_visibility="collapsed")
 
-    if purpose == "개별 위험도 예측":
-        st.subheader("Engine1 (통합 신경망) — 개별 위험도 예측")
-        with st.form("predict_form"):
-            time_horizon = st.select_slider("예측 시점(개월)", options=[12, 36, 60, 120], value=60)
-            submitted = st.form_submit_button("분석 실행")
+        if purpose == "개별 위험도 예측":
+            with st.form("predict_form"):
+                time_horizon = st.select_slider("예측 시점(개월)", options=[12, 36, 60, 120], value=60)
+                submitted = st.form_submit_button("분석 실행")
+        else:
+            missing_outcome = [c for c in [DUR, EVT] if c not in user_df.columns]
+            if missing_outcome:
+                st.error(f"효과비교(Cox 회귀)는 실제 생존기간·사망여부 데이터가 있어야 합니다. "
+                         f"다음 컬럼이 없습니다: {missing_outcome}\n"
+                         f"(신규 환자 예측만 하시려면 '개별 위험도 예측'을 선택하세요 — 그건 결과 데이터 없이도 됩니다)")
+                st.stop()
+            with st.form("cox_form"):
+                compare_col = st.selectbox("비교할 치료 변수", meta['CORE_BINARY'])
+                submitted = st.form_submit_button("분석 실행")
 
-        if submitted:
-            ae_model, deephit_models, prep = load_models()
-            fill_stats, ae_scaler, latent_scaler = prep['ae_fillstats'], prep['ae_scaler'], prep['latent_scaler']
+    if submitted and purpose == "개별 위험도 예측":
+        ae_model, deephit_models, prep = load_models()
+        fill_stats, ae_scaler, latent_scaler = prep['ae_fillstats'], prep['ae_scaler'], prep['latent_scaler']
 
-            X_filled = encoded_df[CORE_COLS].fillna(fill_stats).values.astype('float32')
-            X_scaled = ae_scaler.transform(X_filled).astype('float32')
-            with torch.no_grad():
-                z, _ = ae_model(torch.tensor(X_scaled))
-            z_scaled = latent_scaler.transform(z.numpy()).astype('float32')
+        X_filled = encoded_df[CORE_COLS].fillna(fill_stats).values.astype('float32')
+        X_scaled = ae_scaler.transform(X_filled).astype('float32')
+        with torch.no_grad():
+            z, _ = ae_model(torch.tensor(X_scaled))
+        z_scaled = latent_scaler.transform(z.numpy()).astype('float32')
 
-            result_df = user_df.copy()
-            for cause, cause_name in [(1, '질병사망_위험도'), (2, '타원인사망_위험도')]:
-                surv = deephit_models[cause].predict_surv_df(z_scaled)
-                risk = 1 - surv.reindex(surv.index.union([time_horizon])).sort_index()\
-                              .interpolate(method='index').loc[time_horizon]
-                result_df[cause_name] = risk.values
+        result_df = user_df.copy()
+        for cause, cause_name in [(1, '질병사망_위험도'), (2, '타원인사망_위험도')]:
+            surv = deephit_models[cause].predict_surv_df(z_scaled)
+            risk = 1 - surv.reindex(surv.index.union([time_horizon])).sort_index()\
+                          .interpolate(method='index').loc[time_horizon]
+            result_df[cause_name] = risk.values
 
-            avg_risk = result_df['질병사망_위험도'].mean()
-            st.session_state['last_result'] = {
-                'type': '예측', 'file_id': uploaded.file_id,
-                'result_df': result_df, 'avg_risk': avg_risk, 'time_horizon': time_horizon,
+        avg_risk = result_df['질병사망_위험도'].mean()
+        st.session_state['last_result'] = {
+            'type': '예측', 'file_id': uploaded.file_id,
+            'result_df': result_df, 'avg_risk': avg_risk, 'time_horizon': time_horizon,
+        }
+
+        save_key = f"saved_{uploaded.file_id}_예측_{time_horizon}"
+        if not st.session_state.get(save_key, False):
+            record = {
+                "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
+                "filename": uploaded.name, "title": uploaded.name, "purpose": "예측",
+                "n_patients": len(user_df), "avg_risk": float(avg_risk),
             }
-
-            save_key = f"saved_{uploaded.file_id}_예측_{time_horizon}"
-            if not st.session_state.get(save_key, False):
-                record = {
-                    "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
-                    "filename": uploaded.name, "title": uploaded.name, "purpose": "예측",
-                    "n_patients": len(user_df), "avg_risk": float(avg_risk),
-                }
-                if IS_LOGGED_IN:
-                    try:
-                        supabase.table("analysis_history").insert(record).execute()
-                    except Exception as e:
-                        st.caption(f"(기록 저장 실패: {e})")
-                else:
-                    st.session_state.local_history.insert(0, record)
-                st.session_state[save_key] = True
-            st.rerun()  # 사이드바 기록을 즉시 갱신하기 위해 한 번 더 실행 (가드로 중복저장 없음)
-
-        lr = st.session_state.get('last_result')
-        if lr and lr.get('type') == '예측' and lr.get('file_id') == uploaded.file_id:
-            result_df, avg_risk, time_horizon = lr['result_df'], lr['avg_risk'], lr['time_horizon']
-            st.dataframe(result_df[[c for c in result_df.columns if '위험도' in c or c in CORE_COLS[:3]]])
-            if avg_risk < 0.2:
-                interp = "양호 — 평균적으로 낮은 위험도군입니다."
-            elif avg_risk < 0.4:
-                interp = "중간 — 주의 관찰이 필요한 수준입니다."
+            if IS_LOGGED_IN:
+                try:
+                    supabase.table("analysis_history").insert(record).execute()
+                except Exception as e:
+                    st.caption(f"(기록 저장 실패: {e})")
             else:
-                interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
-            st.info(f"[해석] {time_horizon}개월 시점 평균 질병사망 위험도 {avg_risk:.1%} → {interp}")
+                st.session_state.local_history.insert(0, record)
+            st.session_state[save_key] = True
+        st.rerun()  # 사이드바 기록을 즉시 갱신하기 위해 한 번 더 실행 (가드로 중복저장 없음)
 
-    else:
-        st.subheader("Engine2 (Cox 회귀) — 치료 효과 유의성 비교")
+    if submitted and purpose == "치료 효과 유의성 비교":
+        cph = CoxPHFitter(penalizer=0.1)
+        prep_for_cox = load_preprocessors()
+        cox_input_df = encoded_df.copy()
+        n_missing_before = cox_input_df[CORE_COLS + [DUR, EVT]].isna().sum().sum()
+        missing_note = None
+        if n_missing_before > 0:
+            cox_input_df[CORE_COLS] = cox_input_df[CORE_COLS].fillna(prep_for_cox['ae_fillstats'])
+            missing_note = f"※ 결측값 {n_missing_before}개를 Engine1과 동일한 학습 데이터 평균값으로 채운 뒤 분석했습니다."
+        cph.fit(cox_input_df[CORE_COLS + [DUR, EVT]], duration_col=DUR, event_col=EVT)
 
-        missing_outcome = [c for c in [DUR, EVT] if c not in user_df.columns]
-        if missing_outcome:
-            st.error(f"효과비교(Cox 회귀)는 실제 생존기간·사망여부 데이터가 있어야 합니다. "
-                     f"다음 컬럼이 없습니다: {missing_outcome}\n"
-                     f"(신규 환자 예측만 하시려면 '개별 위험도 예측'을 선택하세요 — 그건 결과 데이터 없이도 됩니다)")
-            st.stop()
+        row = cph.summary.loc[compare_col]
+        hr, p = row['exp(coef)'], row['p']
+        st.session_state['last_result'] = {
+            'type': '효과비교', 'file_id': uploaded.file_id, 'compare_col': compare_col,
+            'hr': hr, 'p': p, 'summary': cph.summary[['coef', 'exp(coef)', 'p']],
+            'missing_note': missing_note,
+        }
 
-        with st.form("cox_form"):
-            compare_col = st.selectbox("비교할 치료 변수", meta['CORE_BINARY'])
-            submitted = st.form_submit_button("분석 실행")
-
-        if submitted:
-            cph = CoxPHFitter(penalizer=0.1)
-            prep_for_cox = load_preprocessors()
-            cox_input_df = encoded_df.copy()
-            n_missing_before = cox_input_df[CORE_COLS + [DUR, EVT]].isna().sum().sum()
-            missing_note = None
-            if n_missing_before > 0:
-                cox_input_df[CORE_COLS] = cox_input_df[CORE_COLS].fillna(prep_for_cox['ae_fillstats'])
-                missing_note = f"※ 결측값 {n_missing_before}개를 Engine1과 동일한 학습 데이터 평균값으로 채운 뒤 분석했습니다."
-            cph.fit(cox_input_df[CORE_COLS + [DUR, EVT]], duration_col=DUR, event_col=EVT)
-
-            row = cph.summary.loc[compare_col]
-            hr, p = row['exp(coef)'], row['p']
-            st.session_state['last_result'] = {
-                'type': '효과비교', 'file_id': uploaded.file_id, 'compare_col': compare_col,
-                'hr': hr, 'p': p, 'summary': cph.summary[['coef', 'exp(coef)', 'p']],
-                'missing_note': missing_note,
+        save_key = f"saved_{uploaded.file_id}_효과비교_{compare_col}"
+        if not st.session_state.get(save_key, False):
+            record = {
+                "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
+                "filename": uploaded.name, "title": uploaded.name, "purpose": "효과비교",
+                "n_patients": len(user_df), "hr_variable": compare_col,
+                "hr_value": float(hr), "p_value": float(p),
             }
-
-            save_key = f"saved_{uploaded.file_id}_효과비교_{compare_col}"
-            if not st.session_state.get(save_key, False):
-                record = {
-                    "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
-                    "filename": uploaded.name, "title": uploaded.name, "purpose": "효과비교",
-                    "n_patients": len(user_df), "hr_variable": compare_col,
-                    "hr_value": float(hr), "p_value": float(p),
-                }
-                if IS_LOGGED_IN:
-                    try:
-                        supabase.table("analysis_history").insert(record).execute()
-                    except Exception as e:
-                        st.caption(f"(기록 저장 실패: {e})")
-                else:
-                    st.session_state.local_history.insert(0, record)
-                st.session_state[save_key] = True
-            st.rerun()
-
-        lr = st.session_state.get('last_result')
-        if lr and lr.get('type') == '효과비교' and lr.get('file_id') == uploaded.file_id:
-            if lr.get('missing_note'):
-                st.caption(lr['missing_note'])
-            hr, p, compare_col = lr['hr'], lr['p'], lr['compare_col']
-            st.metric(f"{compare_col} 위험비(HR)", f"{hr:.3f}", f"p = {p:.4f}")
-            if p < 0.05:
-                direction = "위험을 유의하게 낮춥니다" if hr < 1 else "위험을 유의하게 높입니다"
-                interp = f"{compare_col}는 통계적으로 유의미하게 {direction} (p<0.05)."
+            if IS_LOGGED_IN:
+                try:
+                    supabase.table("analysis_history").insert(record).execute()
+                except Exception as e:
+                    st.caption(f"(기록 저장 실패: {e})")
             else:
-                interp = f"{compare_col}의 효과는 통계적으로 유의하지 않습니다 (p≥0.05) — 표본 크기나 데이터 특성상 추가 검증이 필요합니다."
-            st.info(f"[해석] {interp}")
-            st.write("전체 Cox 회귀 결과:")
-            st.dataframe(lr['summary'])
-else:
-    st.info("CSV 파일을 업로드하면 분석이 시작됩니다.")
+                st.session_state.local_history.insert(0, record)
+            st.session_state[save_key] = True
+        st.rerun()
+
+    # ── 결과 표시 (제출 직후든, 그 다음 재실행이든 항상 세션에 저장된 최신 결과를 보여줌) ──
+    lr = st.session_state.get('last_result')
+    if lr and lr.get('file_id') == uploaded.file_id:
+        with st.chat_message("assistant"):
+            if lr['type'] == '예측':
+                st.write("**Engine1 (통합 신경망)** 으로 개별 위험도를 예측했어요.")
+                result_df, avg_risk, time_horizon = lr['result_df'], lr['avg_risk'], lr['time_horizon']
+                st.dataframe(result_df[[c for c in result_df.columns if '위험도' in c or c in CORE_COLS[:3]]])
+                if avg_risk < 0.2:
+                    interp = "양호 — 평균적으로 낮은 위험도군입니다."
+                elif avg_risk < 0.4:
+                    interp = "중간 — 주의 관찰이 필요한 수준입니다."
+                else:
+                    interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
+                st.info(f"[해석] {time_horizon}개월 시점 평균 질병사망 위험도 {avg_risk:.1%} → {interp}")
+            else:
+                st.write("**Engine2 (Cox 회귀)** 로 효과 비교를 진행했어요.")
+                if lr.get('missing_note'):
+                    st.caption(lr['missing_note'])
+                hr, p, compare_col = lr['hr'], lr['p'], lr['compare_col']
+                st.metric(f"{compare_col} 위험비(HR)", f"{hr:.3f}", f"p = {p:.4f}")
+                if p < 0.05:
+                    direction = "위험을 유의하게 낮춥니다" if hr < 1 else "위험을 유의하게 높입니다"
+                    interp = f"{compare_col}는 통계적으로 유의미하게 {direction} (p<0.05)."
+                else:
+                    interp = f"{compare_col}의 효과는 통계적으로 유의하지 않습니다 (p≥0.05) — 표본 크기나 데이터 특성상 추가 검증이 필요합니다."
+                st.info(f"[해석] {interp}")
+                st.write("전체 Cox 회귀 결과:")
+                st.dataframe(lr['summary'])
