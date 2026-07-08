@@ -48,24 +48,39 @@ with st.sidebar:
     st.subheader("내 최근 분석 기록")
 
     def render_history_item(record, editable_db=False):
+        rid = record.get('id')
         display_title = record.get('title') or record.get('filename') or '(제목 없음)'
         created = str(record.get('created_at', ''))[:16].replace('T', ' ')
-        with st.expander(f"📄 {display_title}  ·  {created}"):
+
+        col_title, col_menu = st.columns([5, 1])
+        with col_title:
+            if st.button(f"📄 {display_title}", key=f"open_{rid}", use_container_width=True):
+                st.session_state[f"show_{rid}"] = not st.session_state.get(f"show_{rid}", False)
+            st.caption(created)
+        with col_menu:
             if editable_db:
-                new_title = st.text_input("제목 수정", value=display_title, key=f"title_input_{record['id']}")
-                if new_title != display_title and st.button("저장", key=f"save_{record['id']}"):
-                    supabase.table("analysis_history").update({"title": new_title}).eq("id", record['id']).execute()
-                    st.rerun()
-            st.write(f"**목적**: {record.get('purpose')}")
-            st.write(f"**환자 수**: {record.get('n_patients')}")
-            if record.get('purpose') == '예측':
-                avg_risk = record.get('avg_risk')
-                if avg_risk is not None:
-                    st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
-            else:
-                st.write(f"**비교 변수**: {record.get('hr_variable')}")
-                if record.get('hr_value') is not None:
-                    st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
+                with st.popover("⋮"):
+                    new_title = st.text_input("이름 수정", value=display_title, key=f"rename_{rid}")
+                    if st.button("저장", key=f"savebtn_{rid}"):
+                        supabase.table("analysis_history").update({"title": new_title}).eq("id", rid).execute()
+                        st.rerun()
+                    st.divider()
+                    if st.button("🗑 삭제", key=f"delbtn_{rid}"):
+                        supabase.table("analysis_history").delete().eq("id", rid).execute()
+                        st.rerun()
+
+        if st.session_state.get(f"show_{rid}", False):
+            with st.container(border=True):
+                st.write(f"**목적**: {record.get('purpose')}")
+                st.write(f"**환자 수**: {record.get('n_patients')}")
+                if record.get('purpose') == '예측':
+                    avg_risk = record.get('avg_risk')
+                    if avg_risk is not None:
+                        st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
+                else:
+                    st.write(f"**비교 변수**: {record.get('hr_variable')}")
+                    if record.get('hr_value') is not None:
+                        st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
 
     if IS_LOGGED_IN:
         try:
