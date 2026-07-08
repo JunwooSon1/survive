@@ -37,24 +37,28 @@ if "local_history" not in st.session_state:
 # ── 사이드바: 로그인 상태 + 최근 분석 기록 ──
 with st.sidebar:
     if IS_LOGGED_IN:
-        st.write(f"👤 {st.user.name}")
-        col_icon, col_email = st.columns([1, 9])
+        st.markdown(
+            f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.2rem;'>{st.user.name}</div>",
+            unsafe_allow_html=True,
+        )
+        col_icon, col_email = st.columns([1, 9], gap="xxsmall")
         with col_icon:
             st.markdown(
-                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
+                '<div style="padding-top:2px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
                 'stroke="#3D3929" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-                '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg>',
+                '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg></div>',
                 unsafe_allow_html=True,
             )
         with col_email:
-            st.text(st.user.email)  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
+            st.text(st.user.email)  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
         st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
         st.button("Google로 로그인", on_click=st.login)
 
     st.divider()
-    st.subheader("내 최근 분석 기록")
+    st.markdown("<div style='font-size:1.1rem; font-weight:700; text-align:left;'>내 최근 분석 기록</div>",
+                unsafe_allow_html=True)
 
     def render_history_item(record, editable_db=False):
         rid = record.get('id')
