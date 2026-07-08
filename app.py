@@ -75,6 +75,8 @@ with st.sidebar:
                             if st.button("예, 삭제", key=f"confirmyes_{rid}", type="tertiary"):
                                 supabase.table("analysis_history").delete().eq("id", rid).execute()
                                 st.session_state['history_ui_version'] = ui_v + 1
+                                st.session_state['confirmed_file_id'] = None  # 진행중이던 분석 프롬프트도 리셋
+                                st.session_state.pop('last_result', None)
                                 st.rerun()
                         with col_no:
                             if st.button("아니오", key=f"confirmno_{rid}", type="tertiary"):
@@ -195,10 +197,16 @@ with st.chat_message("assistant"):
     up_file_id = st.session_state.get('uploaded_file_id')
     up_name = st.session_state.get('uploaded_name')
 
-    if up_file_id and st.session_state.get('confirmed_file_id') != up_file_id:
-        if st.button("다음 →", key=f"proceed_{up_file_id}"):
-            st.session_state['confirmed_file_id'] = up_file_id
-            st.rerun()
+    if up_file_id:
+        if st.session_state.get('confirmed_file_id') != up_file_id:
+            if st.button("다음 →", key=f"proceed_{up_file_id}"):
+                st.session_state['confirmed_file_id'] = up_file_id
+                st.rerun()
+        else:
+            if st.button("🔄 같은 데이터로 새 분석 시작", key=f"restart_{up_file_id}"):
+                st.session_state['confirmed_file_id'] = None
+                st.session_state.pop('last_result', None)
+                st.rerun()
 
 if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     import io
