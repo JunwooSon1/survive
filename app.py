@@ -160,8 +160,8 @@ uploaded = st.file_uploader("임상 데이터 CSV 업로드", type='csv')
 if uploaded is not None:
     user_df = pd.read_csv(uploaded)
 
-    # ── P3-5 간이 스키마 체크 ──
-    missing_cols = [c for c in CORE_COLS + [DUR, EVT] if c not in user_df.columns]
+    # ── P3-5 간이 스키마 체크 (예측에는 실제 결과 데이터가 필요 없으므로 임상변수 16개만 필수) ──
+    missing_cols = [c for c in CORE_COLS if c not in user_df.columns]
     if missing_cols:
         st.error(f"다음 컬럼이 없어 이 데이터는 처리할 수 없습니다: {missing_cols}\n"
                  f"(이 시스템은 METABRIC 임상변수 16개 스키마 전용입니다)")
@@ -230,6 +230,14 @@ if uploaded is not None:
 
     else:
         st.subheader("Engine2 (Cox 회귀) — 치료 효과 유의성 비교")
+
+        missing_outcome = [c for c in [DUR, EVT] if c not in user_df.columns]
+        if missing_outcome:
+            st.error(f"효과비교(Cox 회귀)는 실제 생존기간·사망여부 데이터가 있어야 합니다. "
+                     f"다음 컬럼이 없습니다: {missing_outcome}\n"
+                     f"(신규 환자 예측만 하시려면 '개별 위험도 예측'을 선택하세요 — 그건 결과 데이터 없이도 됩니다)")
+            st.stop()
+
         compare_col = st.selectbox("비교할 치료 변수", meta['CORE_BINARY'])
 
         cph = CoxPHFitter(penalizer=0.1)
