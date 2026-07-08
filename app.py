@@ -155,9 +155,23 @@ with st.sidebar:
         else:
             st.caption("아직 분석 기록이 없습니다.")
 
-st.title("SURVFLOW")
-st.caption("끊긴 데이터를 매끄럽게 잇습니다")
-st.caption("METABRIC 임상변수 16개 스키마 전용 · Engine1(신경망)/Engine2(Cox) 자동 라우팅")
+st.markdown("""
+<a href="/" target="_self" style="text-decoration:none;">
+  <svg width="46" height="46" viewBox="0 0 170 170" style="margin-bottom:0.3rem;">
+    <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
+    <g transform="translate(38,60)" fill="none" stroke-linecap="round">
+      <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
+      <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
+    </g>
+  </svg>
+</a>
+<a href="/" target="_self" style="text-decoration:none;">
+  <div style="font-family:sans-serif; font-weight:700; font-size:2.6rem; line-height:1.1; margin-bottom:0.2rem;">
+    <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
+  </div>
+</a>
+""", unsafe_allow_html=True)
+st.caption("결측치와 중도절단, 자동으로 분석합니다")
 
 # ── 저장된 메타데이터/모델 로드 ──
 @st.cache_resource
