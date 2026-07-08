@@ -34,6 +34,20 @@ def load_preprocessors():
 if "local_history" not in st.session_state:
     st.session_state.local_history = []  # 로그인 안 한 경우, 이 세션 동안만 유지되는 임시 기록
 
+# ── 사이드바 여백 미세조정용 CSS ──
+st.markdown("""
+<style>
+section[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] {
+    gap: 0.2rem !important;
+    margin-bottom: -0.6rem;
+}
+section[data-testid="stSidebar"] button[kind="tertiary"] {
+    padding-left: 0 !important;
+    justify-content: flex-start !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── 사이드바: 로그인 상태 + 최근 분석 기록 ──
 with st.sidebar:
     if IS_LOGGED_IN:
@@ -41,10 +55,10 @@ with st.sidebar:
             f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.2rem;'>{st.user.name}</div>",
             unsafe_allow_html=True,
         )
-        col_icon, col_email = st.columns([1, 9], gap="xxsmall")
+        col_icon, col_email = st.columns([1, 12], gap="xxsmall")
         with col_icon:
             st.markdown(
-                '<div style="padding-top:2px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
+                '<div style="padding-top:4px; margin-right:-10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" '
                 'stroke="#3D3929" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
                 '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg></div>',
                 unsafe_allow_html=True,
