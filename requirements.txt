@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+torch
+torchtuples
+pycox
+lifelines
+scikit-learn
