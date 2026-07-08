@@ -15,7 +15,7 @@ from lifelines import CoxPHFitter
 from pycox.models import DeepHitSingle
 from supabase import create_client
 
-st.set_page_config(page_title="결측치·중도절단 자동 처리 시스템", layout="wide")
+st.set_page_config(page_title="SURVFLOW", layout="wide")
 
 IS_LOGGED_IN = st.user.is_logged_in
 
@@ -71,7 +71,7 @@ with st.sidebar:
         st.button("Google로 로그인", on_click=st.login)
 
     st.divider()
-    st.markdown("<div style='font-size:1.1rem; font-weight:700; text-align:left;'>내 최근 분석 기록</div>",
+    st.markdown("<div style='font-size:1.1rem; font-weight:700; text-align:left;'>최근 분석 기록</div>",
                 unsafe_allow_html=True)
 
     def render_history_item(record, editable_db=False):
@@ -155,7 +155,8 @@ with st.sidebar:
         else:
             st.caption("아직 분석 기록이 없습니다.")
 
-st.title("결측치·중도절단 자동 처리 시스템 (프로토타입)")
+st.title("SURVFLOW")
+st.caption("끊긴 데이터를 매끄럽게 잇습니다")
 st.caption("METABRIC 임상변수 16개 스키마 전용 · Engine1(신경망)/Engine2(Cox) 자동 라우팅")
 
 # ── 저장된 메타데이터/모델 로드 ──
