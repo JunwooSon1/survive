@@ -38,7 +38,16 @@ if "local_history" not in st.session_state:
 with st.sidebar:
     if IS_LOGGED_IN:
         st.write(f"👤 {st.user.name}")
-        st.text(f"✉️  {st.user.email}")  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
+        col_icon, col_email = st.columns([1, 9])
+        with col_icon:
+            st.markdown(
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
+                'stroke="#3D3929" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg>',
+                unsafe_allow_html=True,
+            )
+        with col_email:
+            st.text(st.user.email)  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
         st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
@@ -50,24 +59,28 @@ with st.sidebar:
     def render_history_item(record, editable_db=False):
         rid = record.get('id')
         display_title = record.get('title') or record.get('filename') or '(제목 없음)'
-        created = str(record.get('created_at', ''))[:16].replace('T', ' ')
 
         col_title, col_menu = st.columns([5, 1])
         with col_title:
             if st.button(display_title, key=f"open_{rid}", use_container_width=True, type="tertiary"):
                 st.session_state[f"show_{rid}"] = not st.session_state.get(f"show_{rid}", False)
-            st.caption(created)
         with col_menu:
             if editable_db:
-                with st.popover("⋮"):
-                    new_title = st.text_input("이름 수정", value=display_title, key=f"rename_{rid}")
-                    if st.button("저장", key=f"savebtn_{rid}"):
-                        supabase.table("analysis_history").update({"title": new_title}).eq("id", rid).execute()
-                        st.rerun()
-                    st.divider()
-                    if st.button("🗑 삭제", key=f"delbtn_{rid}"):
-                        supabase.table("analysis_history").delete().eq("id", rid).execute()
-                        st.rerun()
+                with st.popover("⋮", type="tertiary"):
+                    if st.session_state.get(f"renaming_{rid}", False):
+                        new_title = st.text_input("새 이름", value=display_title, key=f"rename_{rid}",
+                                                    label_visibility="collapsed")
+                        if st.button("저장", key=f"savebtn_{rid}", type="tertiary"):
+                            supabase.table("analysis_history").update({"title": new_title}).eq("id", rid).execute()
+                            st.session_state[f"renaming_{rid}"] = False
+                            st.rerun()
+                    else:
+                        if st.button("✏️ 이름 변경", key=f"renamebtn_{rid}", use_container_width=True, type="tertiary"):
+                            st.session_state[f"renaming_{rid}"] = True
+                            st.rerun()
+                        if st.button("🗑 삭제", key=f"delbtn_{rid}", use_container_width=True, type="tertiary"):
+                            supabase.table("analysis_history").delete().eq("id", rid).execute()
+                            st.rerun()
 
         if st.session_state.get(f"show_{rid}", False):
             st.write(f"**목적**: {record.get('purpose')}")
