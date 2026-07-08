@@ -57,7 +57,7 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-tertiary"] {
 # ── 사이드바: 로그인 상태 + 최근 분석 기록 ──
 with st.sidebar:
     st.markdown("""
-    <svg width="36" height="36" viewBox="0 0 170 170" style="margin-bottom:0.3rem;">
+    <svg width="36" height="36" viewBox="0 0 170 170" style="margin-bottom:0.5rem;">
         <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
         <g transform="translate(38,60)" fill="none" stroke-linecap="round">
           <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
@@ -65,9 +65,6 @@ with st.sidebar:
         </g>
     </svg>
     """, unsafe_allow_html=True)
-    if st.button("🏠 처음으로", key="home_reset_sidebar", type="tertiary"):
-        go_home()
-        st.rerun()
 
     if IS_LOGGED_IN:
         st.markdown(
@@ -179,9 +176,6 @@ st.markdown("""
   <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
 </div>
 """, unsafe_allow_html=True)
-if st.button("🏠 처음으로", key="home_reset_main", type="tertiary"):
-    go_home()
-    st.rerun()
 st.caption("결측치와 중도절단, 자동으로 분석합니다")
 
 # ── 저장된 메타데이터/모델 로드 ──
@@ -228,10 +222,13 @@ CORE_CATEGORICAL = meta['CORE_CATEGORICAL']
 DUR, EVT = meta['DUR'], meta['EVT']
 encoders = meta['encoders']
 
+st.html('<link rel="preconnect" href="https://fonts.googleapis.com">'
+        '<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">')
+
 greeting_name = f"{st.user.name}님" if IS_LOGGED_IN else "반가워요"
 st.markdown(
-    f"<div style='font-size:2.1rem; font-weight:700; color:#3D3929; margin:0.8rem 0 1rem 0;'>"
-    f"🌊 {greeting_name}, 환영해요</div>",
+    f"<div style=\"font-family:'Fraunces', serif; font-size:2.3rem; font-weight:700; "
+    f"color:#3D3929; margin:0.8rem 0 1rem 0;\">{greeting_name}, 환영해요</div>",
     unsafe_allow_html=True,
 )
 
