@@ -185,8 +185,12 @@ encoders = meta['encoders']
 with st.chat_message("assistant"):
     st.write("임상 데이터 CSV를 업로드해주세요.")
     uploaded = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed")
+    if uploaded is not None and st.session_state.get('confirmed_file_id') != uploaded.file_id:
+        if st.button("다음 →", key=f"proceed_{uploaded.file_id}"):
+            st.session_state['confirmed_file_id'] = uploaded.file_id
+            st.rerun()
 
-if uploaded is not None:
+if uploaded is not None and st.session_state.get('confirmed_file_id') == uploaded.file_id:
     user_df = pd.read_csv(uploaded)
 
     # ── P3-5 간이 스키마 체크 (예측에는 실제 결과 데이터가 필요 없으므로 임상변수 16개만 필수) ──
