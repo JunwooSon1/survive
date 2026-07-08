@@ -68,7 +68,19 @@ with st.sidebar:
             if editable_db:
                 ui_v = st.session_state.get('history_ui_version', 0)
                 with st.popover("⋮", type="tertiary", key=f"popover_{rid}_{ui_v}"):
-                    if st.session_state.get(f"renaming_{rid}", False):
+                    if st.session_state.get(f"confirming_delete_{rid}", False):
+                        st.write("정말 삭제하시겠어요?")
+                        col_yes, col_no = st.columns(2)
+                        with col_yes:
+                            if st.button("예, 삭제", key=f"confirmyes_{rid}", type="tertiary"):
+                                supabase.table("analysis_history").delete().eq("id", rid).execute()
+                                st.session_state['history_ui_version'] = ui_v + 1
+                                st.rerun()
+                        with col_no:
+                            if st.button("아니오", key=f"confirmno_{rid}", type="tertiary"):
+                                st.session_state[f"confirming_delete_{rid}"] = False
+                                st.rerun()
+                    elif st.session_state.get(f"renaming_{rid}", False):
                         new_title = st.text_input("새 이름", value=display_title, key=f"rename_{rid}",
                                                     label_visibility="collapsed")
                         if st.button("저장", key=f"savebtn_{rid}", type="tertiary"):
@@ -81,8 +93,7 @@ with st.sidebar:
                             st.session_state[f"renaming_{rid}"] = True
                             st.rerun()
                         if st.button("🗑 삭제", key=f"delbtn_{rid}", use_container_width=True, type="tertiary"):
-                            supabase.table("analysis_history").delete().eq("id", rid).execute()
-                            st.session_state['history_ui_version'] = ui_v + 1  # 팝업 상태 강제 초기화
+                            st.session_state[f"confirming_delete_{rid}"] = True
                             st.rerun()
 
         if st.session_state.get(f"show_{rid}", False):
