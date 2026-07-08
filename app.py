@@ -38,7 +38,7 @@ if "local_history" not in st.session_state:
 with st.sidebar:
     if IS_LOGGED_IN:
         st.write(f"👤 {st.user.name}")
-        st.text(st.user.email)  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
+        st.text(f"✉️  {st.user.email}")  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
         st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
@@ -54,7 +54,7 @@ with st.sidebar:
 
         col_title, col_menu = st.columns([5, 1])
         with col_title:
-            if st.button(f"📄 {display_title}", key=f"open_{rid}", use_container_width=True):
+            if st.button(display_title, key=f"open_{rid}", use_container_width=True, type="tertiary"):
                 st.session_state[f"show_{rid}"] = not st.session_state.get(f"show_{rid}", False)
             st.caption(created)
         with col_menu:
@@ -70,17 +70,17 @@ with st.sidebar:
                         st.rerun()
 
         if st.session_state.get(f"show_{rid}", False):
-            with st.container(border=True):
-                st.write(f"**목적**: {record.get('purpose')}")
-                st.write(f"**환자 수**: {record.get('n_patients')}")
-                if record.get('purpose') == '예측':
-                    avg_risk = record.get('avg_risk')
-                    if avg_risk is not None:
-                        st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
-                else:
-                    st.write(f"**비교 변수**: {record.get('hr_variable')}")
-                    if record.get('hr_value') is not None:
-                        st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
+            st.write(f"**목적**: {record.get('purpose')}")
+            st.write(f"**환자 수**: {record.get('n_patients')}")
+            if record.get('purpose') == '예측':
+                avg_risk = record.get('avg_risk')
+                if avg_risk is not None:
+                    st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
+            else:
+                st.write(f"**비교 변수**: {record.get('hr_variable')}")
+                if record.get('hr_value') is not None:
+                    st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
+            st.divider()
 
     if IS_LOGGED_IN:
         try:
