@@ -38,7 +38,6 @@ if "local_history" not in st.session_state:
 with st.sidebar:
     if IS_LOGGED_IN:
         st.write(f"👤 {st.user.name}")
-        st.caption(st.user.email)
         st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
