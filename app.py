@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault('PYCOX_DATA_DIR', '/tmp/pycox_data')  # 클라우드 환경에서 pycox가 site-packages 안에 쓰기 시도하다 PermissionError 나는 것 방지
+
 import streamlit as st
 import pandas as pd
 import numpy as np
