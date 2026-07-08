@@ -47,6 +47,26 @@ with st.sidebar:
     st.divider()
     st.subheader("내 최근 분석 기록")
 
+    def render_history_item(record, editable_db=False):
+        display_title = record.get('title') or record.get('filename') or '(제목 없음)'
+        created = str(record.get('created_at', ''))[:16].replace('T', ' ')
+        with st.expander(f"📄 {display_title}  ·  {created}"):
+            if editable_db:
+                new_title = st.text_input("제목 수정", value=display_title, key=f"title_input_{record['id']}")
+                if new_title != display_title and st.button("저장", key=f"save_{record['id']}"):
+                    supabase.table("analysis_history").update({"title": new_title}).eq("id", record['id']).execute()
+                    st.rerun()
+            st.write(f"**목적**: {record.get('purpose')}")
+            st.write(f"**환자 수**: {record.get('n_patients')}")
+            if record.get('purpose') == '예측':
+                avg_risk = record.get('avg_risk')
+                if avg_risk is not None:
+                    st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
+            else:
+                st.write(f"**비교 변수**: {record.get('hr_variable')}")
+                if record.get('hr_value') is not None:
+                    st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
+
     if IS_LOGGED_IN:
         try:
             history = (
@@ -58,14 +78,17 @@ with st.sidebar:
                 .execute()
             )
             if history.data:
-                st.dataframe(pd.DataFrame(history.data), use_container_width=True, hide_index=True)
+                for record in history.data:
+                    render_history_item(record, editable_db=True)
             else:
                 st.caption("아직 분석 기록이 없습니다.")
         except Exception as e:
             st.caption(f"기록 조회 실패: {e}")
     else:
         if st.session_state.local_history:
-            st.dataframe(pd.DataFrame(st.session_state.local_history), use_container_width=True, hide_index=True)
+            for i, record in enumerate(st.session_state.local_history):
+                record.setdefault('id', f'local_{i}')
+                render_history_item(record, editable_db=False)
             st.caption("⚠ 로그인하지 않아 새로고침하면 이 기록은 사라집니다.")
         else:
             st.caption("아직 분석 기록이 없습니다.")
@@ -177,6 +200,7 @@ if uploaded is not None:
         record = {
             "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
             "filename": uploaded.name,
+            "title": uploaded.name,
             "purpose": "예측",
             "n_patients": len(user_df),
             "avg_risk": float(avg_risk),
@@ -219,6 +243,7 @@ if uploaded is not None:
         record = {
             "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
             "filename": uploaded.name,
+            "title": uploaded.name,
             "purpose": "효과비교",
             "n_patients": len(user_df),
             "hr_variable": compare_col,
