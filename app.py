@@ -225,21 +225,25 @@ if uploaded is not None:
             interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
         st.info(f"[해석] {time_horizon}개월 시점 평균 질병사망 위험도 {avg_risk:.1%} → {interp}")
 
-        record = {
-            "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
-            "filename": uploaded.name,
-            "title": uploaded.name,
-            "purpose": "예측",
-            "n_patients": len(user_df),
-            "avg_risk": float(avg_risk),
-        }
-        if IS_LOGGED_IN:
-            try:
-                supabase.table("analysis_history").insert(record).execute()
-            except Exception as e:
-                st.caption(f"(기록 저장 실패: {e})")
-        else:
-            st.session_state.local_history.insert(0, record)
+        save_key = f"saved_{uploaded.file_id}_예측_{time_horizon}"
+        if not st.session_state.get(save_key, False):
+            record = {
+                "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
+                "filename": uploaded.name,
+                "title": uploaded.name,
+                "purpose": "예측",
+                "n_patients": len(user_df),
+                "avg_risk": float(avg_risk),
+            }
+            if IS_LOGGED_IN:
+                try:
+                    supabase.table("analysis_history").insert(record).execute()
+                except Exception as e:
+                    st.caption(f"(기록 저장 실패: {e})")
+            else:
+                st.session_state.local_history.insert(0, record)
+            st.session_state[save_key] = True
+            st.rerun()  # 사이드바 기록을 즉시 갱신하기 위해 바로 다시 그림 (가드 덕에 무한루프 없음)
 
     else:
         st.subheader("Engine2 (Cox 회귀) — 치료 효과 유의성 비교")
@@ -276,22 +280,26 @@ if uploaded is not None:
         st.write("전체 Cox 회귀 결과:")
         st.dataframe(cph.summary[['coef', 'exp(coef)', 'p']])
 
-        record = {
-            "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
-            "filename": uploaded.name,
-            "title": uploaded.name,
-            "purpose": "효과비교",
-            "n_patients": len(user_df),
-            "hr_variable": compare_col,
-            "hr_value": float(hr),
-            "p_value": float(p),
-        }
-        if IS_LOGGED_IN:
-            try:
-                supabase.table("analysis_history").insert(record).execute()
-            except Exception as e:
-                st.caption(f"(기록 저장 실패: {e})")
-        else:
-            st.session_state.local_history.insert(0, record)
+        save_key = f"saved_{uploaded.file_id}_효과비교_{compare_col}"
+        if not st.session_state.get(save_key, False):
+            record = {
+                "user_email": st.user.email if IS_LOGGED_IN else "(로그인 안 함)",
+                "filename": uploaded.name,
+                "title": uploaded.name,
+                "purpose": "효과비교",
+                "n_patients": len(user_df),
+                "hr_variable": compare_col,
+                "hr_value": float(hr),
+                "p_value": float(p),
+            }
+            if IS_LOGGED_IN:
+                try:
+                    supabase.table("analysis_history").insert(record).execute()
+                except Exception as e:
+                    st.caption(f"(기록 저장 실패: {e})")
+            else:
+                st.session_state.local_history.insert(0, record)
+            st.session_state[save_key] = True
+            st.rerun()
 else:
     st.info("CSV 파일을 업로드하면 분석이 시작됩니다.")
