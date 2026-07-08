@@ -3,6 +3,7 @@ pandas
 numpy
 torch
 torchtuples
+numba>=0.60
 pycox
 lifelines
 scikit-learn
