@@ -38,6 +38,7 @@ if "local_history" not in st.session_state:
 with st.sidebar:
     if IS_LOGGED_IN:
         st.write(f"👤 {st.user.name}")
+        st.caption(st.user.email.replace('@', '&#64;'))  # @를 HTML 엔티티로 바꿔 자동 하이퍼링크 방지
         st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
