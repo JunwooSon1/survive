@@ -47,7 +47,8 @@ section[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
     margin-bottom: -0.8rem;
 }
-section[data-testid="stSidebar"] [data-testid="stBaseButton-tertiary"] {
+section[data-testid="stSidebar"] .stButton button,
+section[data-testid="stSidebar"] [data-testid*="BaseButton-tertiary" i] {
     padding-left: 0 !important;
     justify-content: flex-start !important;
 }
@@ -71,16 +72,7 @@ with st.sidebar:
             f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.2rem;'>{st.user.name}</div>",
             unsafe_allow_html=True,
         )
-        col_icon, col_email = st.columns([1, 12], gap="xxsmall")
-        with col_icon:
-            st.markdown(
-                '<div style="padding-top:4px; margin-right:-10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" '
-                'stroke="#3D3929" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-                '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg></div>',
-                unsafe_allow_html=True,
-            )
-        with col_email:
-            st.text(st.user.email)  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림
+        st.text(f"\u2709 {st.user.email}")  # st.text는 마크다운/HTML 처리를 안 거쳐서 자동 하이퍼링크가 절대 안 걸림, 기호도 텍스트라 정렬 문제 없음
         st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
@@ -222,13 +214,13 @@ CORE_CATEGORICAL = meta['CORE_CATEGORICAL']
 DUR, EVT = meta['DUR'], meta['EVT']
 encoders = meta['encoders']
 
-st.html('<link rel="preconnect" href="https://fonts.googleapis.com">'
-        '<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">')
+st.html('<link rel="stylesheet" as="style" crossorigin '
+        'href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">')
 
 greeting_name = f"{st.user.name}님" if IS_LOGGED_IN else "반가워요"
 st.markdown(
-    f"<div style=\"font-family:'Fraunces', serif; font-size:2.3rem; font-weight:700; "
-    f"color:#3D3929; margin:0.8rem 0 1rem 0;\">{greeting_name}, 환영해요</div>",
+    f"<div style=\"font-family:'Pretendard', sans-serif; font-size:2.3rem; font-weight:700; "
+    f"color:#6B6862; margin:0.8rem 0 1rem 0;\">{greeting_name}, 환영해요</div>",
     unsafe_allow_html=True,
 )
 
