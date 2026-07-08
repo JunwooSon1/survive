@@ -39,9 +39,9 @@ st.markdown("""
 <style>
 section[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
-    margin-bottom: -0.6rem;
+    margin-bottom: -0.8rem;
 }
-section[data-testid="stSidebar"] button[kind="tertiary"] {
+section[data-testid="stSidebar"] [data-testid="stBaseButton-tertiary"] {
     padding-left: 0 !important;
     justify-content: flex-start !important;
 }
