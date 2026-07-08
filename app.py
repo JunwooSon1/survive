@@ -50,6 +50,18 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-tertiary"] {
 
 # ── 사이드바: 로그인 상태 + 최근 분석 기록 ──
 with st.sidebar:
+    st.markdown("""
+    <a href="/" target="_self" style="text-decoration:none;">
+      <svg width="36" height="36" viewBox="0 0 170 170" style="margin-bottom:0.5rem;">
+        <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
+        <g transform="translate(38,60)" fill="none" stroke-linecap="round">
+          <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
+          <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
+        </g>
+      </svg>
+    </a>
+    """, unsafe_allow_html=True)
+
     if IS_LOGGED_IN:
         st.markdown(
             f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.2rem;'>{st.user.name}</div>",
@@ -157,15 +169,6 @@ with st.sidebar:
 
 st.markdown("""
 <a href="/" target="_self" style="text-decoration:none;">
-  <svg width="46" height="46" viewBox="0 0 170 170" style="margin-bottom:0.3rem;">
-    <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
-    <g transform="translate(38,60)" fill="none" stroke-linecap="round">
-      <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
-      <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
-    </g>
-  </svg>
-</a>
-<a href="/" target="_self" style="text-decoration:none;">
   <div style="font-family:sans-serif; font-weight:700; font-size:2.6rem; line-height:1.1; margin-bottom:0.2rem;">
     <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
   </div>
@@ -218,7 +221,8 @@ DUR, EVT = meta['DUR'], meta['EVT']
 encoders = meta['encoders']
 
 with st.chat_message("assistant"):
-    st.write("임상 데이터 CSV를 업로드해주세요.")
+    greeting = f"{st.user.name}님, 안녕하세요! 👋" if IS_LOGGED_IN else "안녕하세요! 👋"
+    st.write(f"{greeting} 임상 데이터 CSV를 업로드해주세요.")
     new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed")
     if new_upload is not None and st.session_state.get('uploaded_file_id') != new_upload.file_id:
         # 새 파일이 들어온 시점에 내용을 세션에 통째로 복사 -> 이후엔 위젯이 아니라 이 값만 참조
