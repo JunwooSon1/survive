@@ -1,9 +1,6 @@
 import os
 os.environ.setdefault('PYCOX_DATA_DIR', '/tmp/pycox_data')  # 클라우드 환경에서 pycox가 site-packages 안에 쓰기 시도하다 PermissionError 나는 것 방지
 
-import os
-os.environ.setdefault('PYCOX_DATA_DIR', '/tmp/pycox_data')  # 클라우드 환경에서 pycox가 site-packages 안에 쓰기 시도하다 PermissionError 나는 것 방지
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -40,32 +37,56 @@ def go_home():
     for k in ['confirmed_file_id', 'uploaded_file_id', 'uploaded_bytes', 'uploaded_name', 'last_result']:
         st.session_state.pop(k, None)
 
-# ── 사이드바 여백 미세조정용 CSS ──
+# ── 사이드바 여백 미세조정용 CSS (key 기반 정밀 타겟팅) ──
 st.html("""
 <style>
-section[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] {
+[class*="st-key-histrow_"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
-    margin-bottom: -0.8rem;
 }
-section[data-testid="stSidebar"] .stButton button,
-section[data-testid="stSidebar"] [data-testid*="BaseButton-tertiary" i] {
+[class*="st-key-histrow_"] [data-testid="stColumn"]:first-of-type {
+    padding-left: 0 !important;
+}
+[class*="st-key-histrow_"] .stButton button {
     padding-left: 0 !important;
     justify-content: flex-start !important;
 }
 </style>
 """)
 
-# ── 사이드바: 로그인 상태 + 최근 분석 기록 ──
+# ── 사이드바: 로고+이름, 새 분석/검색, 로그인 정보, 최근 분석 기록 ──
 with st.sidebar:
-    st.markdown("""
-    <svg width="36" height="36" viewBox="0 0 170 170" style="margin-bottom:0.5rem;">
-        <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
-        <g transform="translate(38,60)" fill="none" stroke-linecap="round">
-          <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
-          <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
-        </g>
-    </svg>
-    """, unsafe_allow_html=True)
+    col_logo_icon, col_logo_text = st.columns([1, 4], gap="small", vertical_alignment="center")
+    with col_logo_icon:
+        st.markdown("""
+        <svg width="30" height="30" viewBox="0 0 170 170">
+            <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
+            <g transform="translate(38,60)" fill="none" stroke-linecap="round">
+              <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
+              <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
+            </g>
+        </svg>
+        """, unsafe_allow_html=True)
+    with col_logo_text:
+        st.markdown(
+            "<div style='font-family:sans-serif; font-weight:700; font-size:1.3rem;'>"
+            "<span style='color:#CC785C;'>surv</span><span style='color:#9B9B9B;'>flow</span></div>",
+            unsafe_allow_html=True,
+        )
+
+    if st.button("＋ 새 분석", key="new_analysis_btn", use_container_width=True, type="tertiary"):
+        go_home()
+        st.rerun()
+
+    show_search = st.session_state.get("show_history_search", False)
+    if st.button("🔍 분석 검색", key="toggle_search_btn", use_container_width=True, type="tertiary"):
+        st.session_state["show_history_search"] = not show_search
+        st.rerun()
+    search_query = ""
+    if st.session_state.get("show_history_search", False):
+        search_query = st.text_input("분석 검색", key="history_search_input",
+                                      placeholder="파일명으로 검색...", label_visibility="collapsed")
+
+    st.markdown("<hr style='border:none; border-top:1px solid #E7E3D8; margin:0.7rem 0;'>", unsafe_allow_html=True)
 
     if IS_LOGGED_IN:
         st.markdown(
@@ -78,7 +99,7 @@ with st.sidebar:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
         st.button("Google로 로그인", on_click=st.login)
 
-    st.divider()
+    st.markdown("<hr style='border:none; border-top:1px solid #E7E3D8; margin:0.7rem 0;'>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:1.1rem; font-weight:700; text-align:left;'>최근 분석 기록</div>",
                 unsafe_allow_html=True)
 
@@ -86,7 +107,8 @@ with st.sidebar:
         rid = record.get('id')
         display_title = record.get('title') or record.get('filename') or '(제목 없음)'
 
-        col_title, col_menu = st.columns([5, 1])
+        row = st.container(key=f"histrow_{rid}")
+        col_title, col_menu = row.columns([5, 1])
         with col_title:
             if st.button(display_title, key=f"open_{rid}", use_container_width=True, type="tertiary"):
                 st.session_state[f"show_{rid}"] = not st.session_state.get(f"show_{rid}", False)
@@ -137,6 +159,12 @@ with st.sidebar:
                     st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
             st.divider()
 
+    def matches_search(record):
+        if not search_query:
+            return True
+        title = (record.get('title') or record.get('filename') or '')
+        return search_query.lower() in title.lower()
+
     if IS_LOGGED_IN:
         try:
             history = (
@@ -147,27 +175,28 @@ with st.sidebar:
                 .limit(20)
                 .execute()
             )
-            if history.data:
-                for record in history.data:
+            filtered = [r for r in history.data if matches_search(r)] if history.data else []
+            if filtered:
+                for record in filtered:
                     render_history_item(record, editable_db=True)
+            elif search_query:
+                st.caption("검색 결과가 없습니다.")
             else:
                 st.caption("아직 분석 기록이 없습니다.")
         except Exception as e:
             st.caption(f"기록 조회 실패: {e}")
     else:
-        if st.session_state.local_history:
-            for i, record in enumerate(st.session_state.local_history):
+        filtered_local = [r for r in st.session_state.local_history if matches_search(r)]
+        if filtered_local:
+            for i, record in enumerate(filtered_local):
                 record.setdefault('id', f'local_{i}')
                 render_history_item(record, editable_db=False)
             st.caption("⚠ 로그인하지 않아 새로고침하면 이 기록은 사라집니다.")
+        elif search_query:
+            st.caption("검색 결과가 없습니다.")
         else:
             st.caption("아직 분석 기록이 없습니다.")
 
-st.markdown("""
-<div style="font-family:sans-serif; font-weight:700; font-size:2.6rem; line-height:1.1; margin-bottom:0.2rem;">
-  <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
-</div>
-""", unsafe_allow_html=True)
 st.caption("결측치와 중도절단, 자동으로 분석합니다")
 
 # ── 저장된 메타데이터/모델 로드 ──
