@@ -26,6 +26,11 @@ def get_supabase():
 
 supabase = get_supabase()
 
+@st.cache_resource
+def load_preprocessors():
+    with open('phase2_preprocessors.pkl', 'rb') as f:
+        return pickle.load(f)
+
 if "local_history" not in st.session_state:
     st.session_state.local_history = []  # 로그인 안 한 경우, 이 세션 동안만 유지되는 임시 기록
 
@@ -189,7 +194,13 @@ if uploaded is not None:
         compare_col = st.selectbox("비교할 치료 변수", meta['CORE_BINARY'])
 
         cph = CoxPHFitter(penalizer=0.1)
-        cph.fit(encoded_df[CORE_COLS + [DUR, EVT]], duration_col=DUR, event_col=EVT)
+        prep_for_cox = load_preprocessors()
+        cox_input_df = encoded_df.copy()
+        n_missing_before = cox_input_df[CORE_COLS + [DUR, EVT]].isna().sum().sum()
+        if n_missing_before > 0:
+            cox_input_df[CORE_COLS] = cox_input_df[CORE_COLS].fillna(prep_for_cox['ae_fillstats'])
+            st.caption(f"※ 결측값 {n_missing_before}개를 Engine1과 동일한 학습 데이터 평균값으로 채운 뒤 분석했습니다.")
+        cph.fit(cox_input_df[CORE_COLS + [DUR, EVT]], duration_col=DUR, event_col=EVT)
 
         row = cph.summary.loc[compare_col]
         hr, p = row['exp(coef)'], row['p']
