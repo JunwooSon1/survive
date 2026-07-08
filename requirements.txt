@@ -6,3 +6,4 @@ torchtuples
 pycox
 lifelines
 scikit-learn
+supabase

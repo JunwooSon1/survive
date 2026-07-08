@@ -1,6 +1,9 @@
 import os
 os.environ.setdefault('PYCOX_DATA_DIR', '/tmp/pycox_data')  # 클라우드 환경에서 pycox가 site-packages 안에 쓰기 시도하다 PermissionError 나는 것 방지
 
+import os
+os.environ.setdefault('PYCOX_DATA_DIR', '/tmp/pycox_data')  # 클라우드 환경에서 pycox가 site-packages 안에 쓰기 시도하다 PermissionError 나는 것 방지
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,8 +13,47 @@ import torchtuples as tt
 import pickle
 from lifelines import CoxPHFitter
 from pycox.models import DeepHitSingle
+from supabase import create_client
 
 st.set_page_config(page_title="결측치·중도절단 자동 처리 시스템", layout="wide")
+
+# ── 구글 로그인 게이트 ──
+if not st.user.is_logged_in:
+    st.title("결측치·중도절단 자동 처리 시스템 (프로토타입)")
+    st.write("이 앱을 사용하려면 구글 계정으로 로그인해주세요.")
+    st.button("Google로 로그인", on_click=st.login)
+    st.stop()
+
+# ── Supabase 클라이언트 ──
+@st.cache_resource
+def get_supabase():
+    return create_client(st.secrets["supabase"]["url"], st.secrets["supabase"]["key"])
+
+supabase = get_supabase()
+
+# ── 사이드바: 로그인 정보 + 최근 분석 기록 ──
+with st.sidebar:
+    st.write(f"👤 {st.user.name}")
+    st.caption(st.user.email)
+    st.button("로그아웃", on_click=st.logout)
+    st.divider()
+    st.subheader("내 최근 분석 기록")
+    try:
+        history = (
+            supabase.table("analysis_history")
+            .select("*")
+            .eq("user_email", st.user.email)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        if history.data:
+            st.dataframe(pd.DataFrame(history.data), use_container_width=True, hide_index=True)
+        else:
+            st.caption("아직 분석 기록이 없습니다.")
+    except Exception as e:
+        st.caption(f"기록 조회 실패: {e}")
+
 st.title("결측치·중도절단 자동 처리 시스템 (프로토타입)")
 st.caption("METABRIC 임상변수 16개 스키마 전용 · Engine1(신경망)/Engine2(Cox) 자동 라우팅")
 
@@ -116,6 +158,17 @@ if uploaded is not None:
             interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
         st.info(f"[해석] {time_horizon}개월 시점 평균 질병사망 위험도 {avg_risk:.1%} → {interp}")
 
+        try:
+            supabase.table("analysis_history").insert({
+                "user_email": st.user.email,
+                "filename": uploaded.name,
+                "purpose": "예측",
+                "n_patients": len(user_df),
+                "avg_risk": float(avg_risk),
+            }).execute()
+        except Exception as e:
+            st.caption(f"(기록 저장 실패: {e})")
+
     else:
         st.subheader("Engine2 (Cox 회귀) — 치료 효과 유의성 비교")
         compare_col = st.selectbox("비교할 치료 변수", meta['CORE_BINARY'])
@@ -136,5 +189,18 @@ if uploaded is not None:
 
         st.write("전체 Cox 회귀 결과:")
         st.dataframe(cph.summary[['coef', 'exp(coef)', 'p']])
+
+        try:
+            supabase.table("analysis_history").insert({
+                "user_email": st.user.email,
+                "filename": uploaded.name,
+                "purpose": "효과비교",
+                "n_patients": len(user_df),
+                "hr_variable": compare_col,
+                "hr_value": float(hr),
+                "p_value": float(p),
+            }).execute()
+        except Exception as e:
+            st.caption(f"(기록 저장 실패: {e})")
 else:
     st.info("CSV 파일을 업로드하면 분석이 시작됩니다.")
