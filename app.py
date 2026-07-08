@@ -35,7 +35,7 @@ if "local_history" not in st.session_state:
     st.session_state.local_history = []  # 로그인 안 한 경우, 이 세션 동안만 유지되는 임시 기록
 
 # ── 사이드바 여백 미세조정용 CSS ──
-st.markdown("""
+st.html("""
 <style>
 section[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
@@ -46,7 +46,7 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-tertiary"] {
     justify-content: flex-start !important;
 }
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # ── 사이드바: 로그인 상태 + 최근 분석 기록 ──
 with st.sidebar:
