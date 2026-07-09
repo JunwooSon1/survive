@@ -100,15 +100,31 @@ div[data-testid="stPopoverBody"] .stButton button {
 div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
     gap: 0.1rem !important;
 }
-[class*="st-key-start_analysis_box"] {
+[class*="st-key-upload_card"] {
     background-color: #F0EEE5 !important;
-    border-radius: 0 0 12px 12px !important;
+    border-radius: 12px !important;
     padding: 1rem !important;
     max-width: 260px;
-    margin-top: -1rem !important;
 }
-div[data-testid="stFileUploaderDropzone"] {
-    border-radius: 12px 12px 0 0 !important;
+[class*="st-key-upload_card"] div[data-testid="stFileUploaderDropzone"] {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+/* 파일 첨부 후 나오는 아이콘 교체 시도 (선택자 확정 안 됨 - 실험적) */
+[data-testid="stFileUploaderFile"] svg {
+    display: none !important;
+}
+[data-testid="stFileUploaderFile"]::before {
+    content: "📄";
+    margin-right: 0.5rem;
+    font-size: 1.3rem;
+}
+/* 비활성 버튼일 때 확실히 회색으로 */
+[class*="st-key-upload_card"] button:disabled {
+    background-color: #D8D4C8 !important;
+    color: #A9A296 !important;
+    border-color: #D8D4C8 !important;
 }
 </style>
 """)
@@ -337,22 +353,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.write("임상 데이터 CSV를 업로드해주세요.")
-new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed",
-                               key=f"uploader_{st.session_state.get('uploader_key_version', 0)}")
-if new_upload is not None and st.session_state.get('uploaded_file_id') != new_upload.file_id:
-    # 새 파일이 들어온 시점에 내용을 세션에 통째로 복사 -> 이후엔 위젯이 아니라 이 값만 참조
-    st.session_state['uploaded_bytes'] = new_upload.getvalue()
-    st.session_state['uploaded_name'] = new_upload.name
-    st.session_state['uploaded_file_id'] = new_upload.file_id
-    st.session_state['confirmed_file_id'] = None  # 새 파일이면 확인 상태 초기화
-    st.session_state.pop('viewing_history_record', None)
+with st.container(key="upload_card"):
+    st.write("임상 데이터 CSV를 업로드해주세요.")
+    new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed",
+                                   key=f"uploader_{st.session_state.get('uploader_key_version', 0)}")
+    if new_upload is not None and st.session_state.get('uploaded_file_id') != new_upload.file_id:
+        # 새 파일이 들어온 시점에 내용을 세션에 통째로 복사 -> 이후엔 위젯이 아니라 이 값만 참조
+        st.session_state['uploaded_bytes'] = new_upload.getvalue()
+        st.session_state['uploaded_name'] = new_upload.name
+        st.session_state['uploaded_file_id'] = new_upload.file_id
+        st.session_state['confirmed_file_id'] = None  # 새 파일이면 확인 상태 초기화
+        st.session_state.pop('viewing_history_record', None)
 
-up_file_id = st.session_state.get('uploaded_file_id')
-up_name = st.session_state.get('uploaded_name')
+    up_file_id = st.session_state.get('uploaded_file_id')
+    up_name = st.session_state.get('uploaded_name')
 
-if st.session_state.get('confirmed_file_id') != up_file_id:
-    with st.container(key="start_analysis_box"):
+    if st.session_state.get('confirmed_file_id') != up_file_id:
         if st.button("분석 시작", key="proceed_btn", icon=":material/arrow_forward:",
                       use_container_width=True, type="primary", disabled=(up_file_id is None)):
             st.session_state['confirmed_file_id'] = up_file_id
