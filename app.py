@@ -478,7 +478,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
         missing_note = None
         if n_missing_before > 0:
             cox_input_df[CORE_COLS] = cox_input_df[CORE_COLS].fillna(prep_for_cox['ae_fillstats'])
-            missing_note = f"※ 결측값 {n_missing_before}개를 Engine1과 동일한 학습 데이터 평균값으로 채운 뒤 분석했습니다."
+            missing_note = f"※ 결측값 {n_missing_before}개를 예측 모델 학습 시 사용했던 평균값으로 채운 뒤 분석했습니다."
         cph.fit(cox_input_df[CORE_COLS + [DUR, EVT]], duration_col=DUR, event_col=EVT)
 
         row = cph.summary.loc[compare_col]
@@ -515,7 +515,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     lr = st.session_state.get('last_result')
     if lr and lr.get('file_id') == up_file_id:
         if lr['type'] == '예측':
-            st.write("**Engine1 (통합 신경망)** 으로 개별 위험도를 예측했어요.")
+            st.write("개별 위험도를 예측했어요.")
             result_df, avg_risk, time_horizon = lr['result_df'], lr['avg_risk'], lr['time_horizon']
             st.dataframe(result_df[[c for c in result_df.columns if '위험도' in c or c in CORE_COLS[:3]]])
             if avg_risk < 0.2:
@@ -526,16 +526,22 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
                 interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
             st.info(f"[해석] {time_horizon}개월 시점 평균 질병사망 위험도 {avg_risk:.1%} → {interp}")
         else:
-            st.write("**Engine2 (Cox 회귀)** 로 효과 비교를 진행했어요.")
+            st.write("효과 비교를 진행했어요.")
             if lr.get('missing_note'):
                 st.caption(lr['missing_note'])
             hr, p, compare_col = lr['hr'], lr['p'], lr['compare_col']
             st.metric(f"{compare_col} 위험비(HR)", f"{hr:.3f}", f"p = {p:.4f}")
             if p < 0.05:
-                direction = "위험을 유의하게 낮춥니다" if hr < 1 else "위험을 유의하게 높입니다"
-                interp = f"{compare_col}는 통계적으로 유의미하게 {direction} (p<0.05)."
+                if hr < 1:
+                    interp = (f"이 데이터에서는 **{compare_col}을(를) 받은 환자군이 안 받은 환자군보다 사망 위험이 "
+                               f"더 낮게** 나타났고, 이 차이가 우연으로 보기엔 통계적으로 뚜렷했어요 (p<0.05).")
+                else:
+                    interp = (f"이 데이터에서는 **{compare_col}을(를) 받은 환자군이 안 받은 환자군보다 사망 위험이 "
+                               f"더 높게** 나타났고, 이 차이가 우연으로 보기엔 통계적으로 뚜렷했어요 (p<0.05).")
             else:
-                interp = f"{compare_col}의 효과는 통계적으로 유의하지 않습니다 (p≥0.05) — 표본 크기나 데이터 특성상 추가 검증이 필요합니다."
+                interp = (f"**{compare_col}을(를) 받은 환자군과 안 받은 환자군 사이에 뚜렷한 생존 차이가 "
+                           f"확인되지 않았어요** (p≥0.05). 즉 이 표본만으로는 '{compare_col}이(가) 실제로 효과가 있다'고 "
+                           f"확신하기 어렵다는 뜻이에요 (효과가 없다고 확정하는 것도 아니고, 표본이 더 크면 결과가 달라질 수 있어요).")
             st.info(f"[해석] {interp}")
             st.write("전체 Cox 회귀 결과:")
             st.dataframe(lr['summary'])
