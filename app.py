@@ -34,7 +34,7 @@ if "local_history" not in st.session_state:
 def go_home():
     """업로드 파일까지 포함해 완전히 초기 상태로 되돌림 (파일 업로더도 새 위젯으로 교체)"""
     st.session_state['uploader_key_version'] = st.session_state.get('uploader_key_version', 0) + 1
-    for k in ['confirmed_file_id', 'uploaded_file_id', 'uploaded_bytes', 'uploaded_name', 'last_result']:
+    for k in ['confirmed_file_id', 'uploaded_file_id', 'uploaded_bytes', 'uploaded_name', 'last_result', 'viewing_history_record']:
         st.session_state.pop(k, None)
 
 # ── 사이드바 여백 미세조정용 CSS (key 기반 정밀 타겟팅) ──
@@ -140,7 +140,7 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
         st.html(
-            f'<div style="display:flex; align-items:baseline; gap:0.35rem; margin-bottom:0.8rem;">'
+            f'<div style="display:flex; align-items:baseline; gap:0.35rem; margin-bottom:0.15rem;">'
             f'<span style="position:relative; top:2px; font-size:0.95rem;">&#9993;</span>'
             f'<span>{st.user.email}</span></div>'
         )
@@ -162,7 +162,8 @@ with st.sidebar:
         col_title, col_menu = row.columns([5, 1])
         with col_title:
             if st.button(display_title, key=f"open_{rid}", use_container_width=True, type="tertiary"):
-                st.session_state[f"show_{rid}"] = not st.session_state.get(f"show_{rid}", False)
+                st.session_state['viewing_history_record'] = record
+                st.rerun()
         with col_menu:
             if editable_db:
                 ui_v = st.session_state.get('history_ui_version', 0)
@@ -188,18 +189,6 @@ with st.sidebar:
                             st.session_state[f"confirming_delete_{rid}"] = True
                             st.rerun()
 
-        if st.session_state.get(f"show_{rid}", False):
-            st.write(f"**목적**: {record.get('purpose')}")
-            st.write(f"**환자 수**: {record.get('n_patients')}")
-            if record.get('purpose') == '예측':
-                avg_risk = record.get('avg_risk')
-                if avg_risk is not None:
-                    st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
-            else:
-                st.write(f"**비교 변수**: {record.get('hr_variable')}")
-                if record.get('hr_value') is not None:
-                    st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
-            st.divider()
 
     def matches_search(record):
         if not search_query:
@@ -300,6 +289,28 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if st.session_state.get('viewing_history_record'):
+    record = st.session_state['viewing_history_record']
+    with st.chat_message("assistant"):
+        title = record.get('title') or record.get('filename') or '(제목 없음)'
+        st.write(f"**{title}** 분석 결과예요.")
+        if record.get('purpose') == '예측':
+            st.write("**목적**: 개별 위험도 예측")
+            st.write(f"**환자 수**: {record.get('n_patients')}")
+            avg_risk = record.get('avg_risk')
+            if avg_risk is not None:
+                st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
+        else:
+            st.write("**목적**: 치료 효과 유의성 비교")
+            st.write(f"**환자 수**: {record.get('n_patients')}")
+            st.write(f"**비교 변수**: {record.get('hr_variable')}")
+            if record.get('hr_value') is not None:
+                st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
+        st.caption("※ 저장된 요약 결과예요 (환자별 상세 표는 같은 데이터로 다시 분석해야 볼 수 있어요).")
+        if st.button("닫기", key="close_history_view", type="tertiary"):
+            st.session_state.pop('viewing_history_record', None)
+            st.rerun()
+
 st.write("임상 데이터 CSV를 업로드해주세요.")
 new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed",
                                key=f"uploader_{st.session_state.get('uploader_key_version', 0)}")
@@ -309,6 +320,7 @@ if new_upload is not None and st.session_state.get('uploaded_file_id') != new_up
     st.session_state['uploaded_name'] = new_upload.name
     st.session_state['uploaded_file_id'] = new_upload.file_id
     st.session_state['confirmed_file_id'] = None  # 새 파일이면 확인 상태 초기화
+    st.session_state.pop('viewing_history_record', None)
 
 up_file_id = st.session_state.get('uploaded_file_id')
 up_name = st.session_state.get('uploaded_name')
