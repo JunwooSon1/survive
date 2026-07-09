@@ -627,7 +627,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
             min_risk = st.slider("질병사망 위험도 이 값 이상만 보기", 0.0, 1.0, 0.0, 0.05, key="risk_filter_slider")
             filtered_result_df = result_df[result_df['질병사망_위험도'] >= min_risk]
             st.caption(f"{len(filtered_result_df)} / {len(result_df)}명 표시 중 — 각 행은 환자 한 명, "
-                       f"오른쪽 열은 예측된 시점별 사망 위험도(%)예요.")
+                       f"'질병사망_위험도'는 이 병으로 그 시점까지 사망할 확률, '타원인사망_위험도'는 다른 원인으로 사망할 확률을 뜻해요.")
             st.dataframe(filtered_result_df[display_cols])
             if avg_risk < 0.2:
                 interp = "양호 — 평균적으로 낮은 위험도군입니다."
@@ -660,8 +660,8 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
                            f"확신하기 어렵다는 뜻이에요 (효과가 없다고 확정하는 것도 아니에요).{small_sample_note}")
             st.info(f"[해석] {interp}")
             st.write("전체 Cox 회귀 결과:")
-            st.caption("각 행은 임상변수 하나예요. exp(coef)가 HR(위험비), p가 유의확률입니다 — "
-                       "HR>1은 위험 증가, HR<1은 위험 감소 방향, p<0.05면 통계적으로 유의해요.")
+            st.caption("표의 각 행은 임상변수 하나에 대한 결과이고, exp(coef) 값이 HR(위험비)예요 — "
+                       "1보다 크면 위험이 커지는 방향, 작으면 낮아지는 방향이고, p가 0.05보다 작으면 통계적으로 유의한 변수예요.")
             st.dataframe(lr['summary'])
 
 # ── 사이드바에서 과거 기록을 클릭해서 볼 때 (상세 표 포함) ──
@@ -689,7 +689,7 @@ if st.session_state.get('viewing_history_record'):
                                            key=f"hist_risk_filter_{record.get('id')}")
                 hist_df = hist_df[hist_df['질병사망_위험도'] >= hist_min_risk]
                 st.caption(f"{len(hist_df)} / {len(record['detail_json'])}명 표시 중 — 각 행은 환자 한 명, "
-                           f"오른쪽 열은 예측된 시점별 사망 위험도(%)예요.")
+                           f"'질병사망_위험도'는 이 병으로 그 시점까지 사망할 확률, '타원인사망_위험도'는 다른 원인으로 사망할 확률을 뜻해요.")
             st.dataframe(hist_df)
     else:
         st.write("**목적**: 치료 효과 유의성 검정")
@@ -715,8 +715,8 @@ if st.session_state.get('viewing_history_record'):
             st.info(f"[해석] {hist_interp}")
         if record.get('detail_json'):
             st.write("전체 Cox 회귀 결과:")
-            st.caption("각 행은 임상변수 하나예요. exp(coef)가 HR(위험비), p가 유의확률입니다 — "
-                       "HR>1은 위험 증가, HR<1은 위험 감소 방향, p<0.05면 통계적으로 유의해요.")
+            st.caption("표의 각 행은 임상변수 하나에 대한 결과이고, exp(coef) 값이 HR(위험비)예요 — "
+                       "1보다 크면 위험이 커지는 방향, 작으면 낮아지는 방향이고, p가 0.05보다 작으면 통계적으로 유의한 변수예요.")
             st.dataframe(pd.DataFrame(record['detail_json']))
     if st.button("닫기", key="close_history_view", type="tertiary"):
         st.session_state.pop('viewing_history_record', None)
