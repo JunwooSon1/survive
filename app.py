@@ -449,6 +449,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
             submitted = st.form_submit_button("분석 실행")
 
     if submitted and purpose == "개별 위험도 예측":
+        st.session_state.pop('viewing_history_record', None)
         ae_model, deephit_models, prep = load_models()
         fill_stats, ae_scaler, latent_scaler = prep['ae_fillstats'], prep['ae_scaler'], prep['latent_scaler']
 
@@ -492,6 +493,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
         st.rerun()  # 사이드바 기록을 즉시 갱신하기 위해 한 번 더 실행 (가드로 중복저장 없음)
 
     if submitted and purpose == "치료 효과 유의성 검정":
+        st.session_state.pop('viewing_history_record', None)
         cph = CoxPHFitter(penalizer=0.1)
         prep_for_cox = load_preprocessors()
         cox_input_df = encoded_df.copy()
@@ -533,8 +535,9 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
         st.rerun()
 
     # ── 결과 표시 (제출 직후든, 그 다음 재실행이든 항상 세션에 저장된 최신 결과를 보여줌) ──
+    # 과거 기록을 보는 중일 땐 라이브 결과를 숨겨서 둘이 섞여 보이지 않게 함
     lr = st.session_state.get('last_result')
-    if lr and lr.get('file_id') == up_file_id:
+    if lr and lr.get('file_id') == up_file_id and not st.session_state.get('viewing_history_record'):
         if lr['type'] == '예측':
             st.write("개별 위험도를 예측했어요.")
             result_df, avg_risk, time_horizon = lr['result_df'], lr['avg_risk'], lr['time_horizon']
@@ -595,7 +598,13 @@ if st.session_state.get('viewing_history_record'):
                 hist_interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
             st.info(f"[해석] 평균 질병사망 위험도 {avg_risk:.1%} → {hist_interp}")
         if record.get('detail_json'):
-            st.dataframe(pd.DataFrame(record['detail_json']))
+            hist_df = pd.DataFrame(record['detail_json'])
+            if '질병사망_위험도' in hist_df.columns:
+                hist_min_risk = st.slider("질병사망 위험도 이 값 이상만 보기", 0.0, 1.0, 0.0, 0.05,
+                                           key=f"hist_risk_filter_{record.get('id')}")
+                hist_df = hist_df[hist_df['질병사망_위험도'] >= hist_min_risk]
+                st.caption(f"{len(hist_df)} / {len(record['detail_json'])}명 표시 중")
+            st.dataframe(hist_df)
     else:
         st.write("**목적**: 치료 효과 유의성 검정")
         st.write(f"**환자 수**: {record.get('n_patients')}")
