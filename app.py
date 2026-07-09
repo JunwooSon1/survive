@@ -100,6 +100,12 @@ div[data-testid="stPopoverBody"] .stButton button {
 div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
     gap: 0.1rem !important;
 }
+[class*="st-key-start_analysis_box"] {
+    background-color: #F0EEE5 !important;
+    border-radius: 12px !important;
+    padding: 1rem !important;
+    max-width: 260px;
+}
 </style>
 """)
 
@@ -342,9 +348,11 @@ up_file_id = st.session_state.get('uploaded_file_id')
 up_name = st.session_state.get('uploaded_name')
 
 if up_file_id and st.session_state.get('confirmed_file_id') != up_file_id:
-    if st.button("분석 시작", key=f"proceed_{up_file_id}", icon=":material/arrow_forward:", type="primary"):
-        st.session_state['confirmed_file_id'] = up_file_id
-        st.rerun()
+    with st.container(key="start_analysis_box"):
+        if st.button("분석 시작", key=f"proceed_{up_file_id}", icon=":material/arrow_forward:",
+                      use_container_width=True, type="primary"):
+            st.session_state['confirmed_file_id'] = up_file_id
+            st.rerun()
 
 if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     import io
@@ -369,6 +377,8 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     st.write(f"스키마 확인 완료 — {len(user_df)}명 데이터 로드됐어요.")
     if unseen_flag:
         st.write("⚠️ 일부 범주형 값이 학습 데이터에 없던 값이라 결측으로 처리했어요.")
+    if st.session_state.get('last_result', {}).get('file_id') == up_file_id:
+        st.caption("💡 아래에서 조건을 바꾸고 '분석 실행'을 다시 누르면 같은 데이터로 재분석할 수 있어요.")
     st.write("어떤 걸 도와드릴까요?")
     purpose = st.radio("분석 목적을 선택하세요", ["개별 위험도 예측", "치료 효과 유의성 비교"],
                         label_visibility="collapsed")
