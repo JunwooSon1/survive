@@ -82,6 +82,24 @@ section[data-testid="stSidebar"] .stMainBlockContainer {
 }
 [class*="st-key-logo_row"] {
     margin-bottom: 0.3rem !important;
+    position: relative !important;
+}
+[class*="st-key-logo_row"] [data-testid="stButton"] {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 10 !important;
+    margin: 0 !important;
+}
+[class*="st-key-logo_row"] [data-testid="stButton"] button {
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
 }
 /* 팝업(⋮ 메뉴) 자체의 여백을 큰 폭으로 축소 */
 div[data-testid="stPopoverBody"] {
@@ -215,6 +233,9 @@ with st.sidebar:
             </div>
         </div>
         """, unsafe_allow_html=True)
+        if st.button("\u200b", key="logo_home_btn"):
+            go_home()
+            st.rerun()
 
     with st.container(key="new_analysis_wrap"):
         if st.button("새 분석", key="new_analysis_btn", icon=":material/add:",
@@ -409,7 +430,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
         "<div style='line-height:1.7; margin-bottom:0.3rem;'>" + "<br>".join(lines) + "</div>",
         unsafe_allow_html=True,
     )
-    purpose = st.radio("분석 목적을 선택하세요", ["개별 위험도 예측", "치료 효과 유의성 비교"],
+    purpose = st.radio("분석 목적을 선택하세요", ["개별 위험도 예측", "치료 효과 유의성 검정"],
                         label_visibility="collapsed")
 
     if purpose == "개별 위험도 예측":
@@ -419,7 +440,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     else:
         missing_outcome = [c for c in [DUR, EVT] if c not in user_df.columns]
         if missing_outcome:
-            st.error(f"효과비교(Cox 회귀)는 실제 생존기간·사망여부 데이터가 있어야 합니다. "
+            st.error(f"효과 유의성 검정은 실제 생존기간·사망여부 데이터가 있어야 합니다. "
                      f"다음 컬럼이 없습니다: {missing_outcome}\n"
                      f"(신규 환자 예측만 하시려면 '개별 위험도 예측'을 선택하세요 — 그건 결과 데이터 없이도 됩니다)")
             st.stop()
@@ -470,7 +491,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
             st.session_state[save_key] = True
         st.rerun()  # 사이드바 기록을 즉시 갱신하기 위해 한 번 더 실행 (가드로 중복저장 없음)
 
-    if submitted and purpose == "치료 효과 유의성 비교":
+    if submitted and purpose == "치료 효과 유의성 검정":
         cph = CoxPHFitter(penalizer=0.1)
         prep_for_cox = load_preprocessors()
         cox_input_df = encoded_df.copy()
@@ -517,7 +538,11 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
         if lr['type'] == '예측':
             st.write("개별 위험도를 예측했어요.")
             result_df, avg_risk, time_horizon = lr['result_df'], lr['avg_risk'], lr['time_horizon']
-            st.dataframe(result_df[[c for c in result_df.columns if '위험도' in c or c in CORE_COLS[:3]]])
+            display_cols = [c for c in result_df.columns if '위험도' in c or c in CORE_COLS[:3]]
+            min_risk = st.slider("질병사망 위험도 이 값 이상만 보기", 0.0, 1.0, 0.0, 0.05, key="risk_filter_slider")
+            filtered_result_df = result_df[result_df['질병사망_위험도'] >= min_risk]
+            st.caption(f"{len(filtered_result_df)} / {len(result_df)}명 표시 중")
+            st.dataframe(filtered_result_df[display_cols])
             if avg_risk < 0.2:
                 interp = "양호 — 평균적으로 낮은 위험도군입니다."
             elif avg_risk < 0.4:
@@ -526,7 +551,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
                 interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
             st.info(f"[해석] {time_horizon}개월 시점 평균 질병사망 위험도 {avg_risk:.1%} → {interp}")
         else:
-            st.write("효과 비교를 진행했어요.")
+            st.write("효과 유의성 검정을 진행했어요.")
             if lr.get('missing_note'):
                 st.caption(lr['missing_note'])
             hr, p, compare_col = lr['hr'], lr['p'], lr['compare_col']
@@ -572,7 +597,7 @@ if st.session_state.get('viewing_history_record'):
         if record.get('detail_json'):
             st.dataframe(pd.DataFrame(record['detail_json']))
     else:
-        st.write("**목적**: 치료 효과 유의성 비교")
+        st.write("**목적**: 치료 효과 유의성 검정")
         st.write(f"**환자 수**: {record.get('n_patients')}")
         compare_col = record.get('hr_variable')
         st.write(f"**비교 변수**: {compare_col}")
