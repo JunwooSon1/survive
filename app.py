@@ -109,6 +109,22 @@ div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
 </style>
 """)
 
+# ── 삭제 확인 모달창 ──
+@st.dialog("삭제 확인")
+def delete_dialog(rid, title):
+    st.write(f"**{title}** 을(를) 정말 삭제하시겠어요?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("예, 삭제", key=f"dialog_delyes_{rid}", use_container_width=True, type="primary"):
+            supabase.table("analysis_history").delete().eq("id", rid).execute()
+            st.session_state['history_ui_version'] = st.session_state.get('history_ui_version', 0) + 1
+            st.session_state['confirmed_file_id'] = None  # 진행중이던 분석 프롬프트도 리셋
+            st.session_state.pop('last_result', None)
+            st.rerun()
+    with col2:
+        if st.button("아니오", key=f"dialog_delno_{rid}", use_container_width=True):
+            st.rerun()
+
 # ── 이름 변경 모달창 ──
 @st.dialog("이름 변경")
 def rename_dialog(rid, current_title):
@@ -224,26 +240,10 @@ with st.sidebar:
             if editable_db:
                 ui_v = st.session_state.get('history_ui_version', 0)
                 with st.popover("⋮", type="tertiary", key=f"popover_{rid}_{ui_v}"):
-                    if st.session_state.get(f"confirming_delete_{rid}", False):
-                        st.write("정말 삭제하시겠어요?")
-                        col_yes, col_no = st.columns(2)
-                        with col_yes:
-                            if st.button("예, 삭제", key=f"confirmyes_{rid}", type="tertiary"):
-                                supabase.table("analysis_history").delete().eq("id", rid).execute()
-                                st.session_state['history_ui_version'] = ui_v + 1
-                                st.session_state['confirmed_file_id'] = None  # 진행중이던 분석 프롬프트도 리셋
-                                st.session_state.pop('last_result', None)
-                                st.rerun()
-                        with col_no:
-                            if st.button("아니오", key=f"confirmno_{rid}", type="tertiary"):
-                                st.session_state[f"confirming_delete_{rid}"] = False
-                                st.rerun()
-                    else:
-                        if st.button("✏️ 이름 변경", key=f"renamebtn_{rid}", use_container_width=True, type="tertiary"):
-                            rename_dialog(rid, display_title)
-                        if st.button("🗑 삭제", key=f"delbtn_{rid}", use_container_width=True, type="tertiary"):
-                            st.session_state[f"confirming_delete_{rid}"] = True
-                            st.rerun()
+                    if st.button("✏️ 이름 변경", key=f"renamebtn_{rid}", use_container_width=True, type="tertiary"):
+                        rename_dialog(rid, display_title)
+                    if st.button("🗑 삭제", key=f"delbtn_{rid}", use_container_width=True, type="tertiary"):
+                        delete_dialog(rid, display_title)
 
 
     if IS_LOGGED_IN:
@@ -374,17 +374,21 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
             unseen_flag = True
 
     submitted = False
-    st.write(f"스키마 확인 완료 — {len(user_df)}명 데이터 로드됐어요.")
+    lines = [f"스키마 확인 완료 — {len(user_df)}명 데이터 로드됐어요."]
     if unseen_flag:
-        st.write("⚠️ 일부 범주형 값이 학습 데이터에 없던 값이라 결측으로 처리했어요.")
+        lines.append("⚠️ 일부 범주형 값이 학습 데이터에 없던 값이라 결측으로 처리했어요.")
     if st.session_state.get('last_result', {}).get('file_id') == up_file_id:
-        st.caption("💡 아래에서 조건을 바꾸고 '분석 실행'을 다시 누르면 같은 데이터로 재분석할 수 있어요.")
-    st.write("어떤 걸 도와드릴까요?")
+        lines.append("💡 아래에서 조건을 바꾸고 '분석 실행'을 다시 누르면 같은 데이터로 재분석할 수 있어요.")
+    lines.append("어떤 걸 도와드릴까요?")
+    st.markdown(
+        "<div style='line-height:1.7; margin-bottom:0.3rem;'>" + "<br>".join(lines) + "</div>",
+        unsafe_allow_html=True,
+    )
     purpose = st.radio("분석 목적을 선택하세요", ["개별 위험도 예측", "치료 효과 유의성 비교"],
                         label_visibility="collapsed")
 
     if purpose == "개별 위험도 예측":
-        with st.form("predict_form"):
+        with st.form("predict_form", border=False):
             time_horizon = st.select_slider("예측 시점(개월)", options=[12, 36, 60, 120], value=60)
             submitted = st.form_submit_button("분석 실행")
     else:
@@ -394,7 +398,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
                      f"다음 컬럼이 없습니다: {missing_outcome}\n"
                      f"(신규 환자 예측만 하시려면 '개별 위험도 예측'을 선택하세요 — 그건 결과 데이터 없이도 됩니다)")
             st.stop()
-        with st.form("cox_form"):
+        with st.form("cox_form", border=False):
             compare_col = st.selectbox("비교할 치료 변수", meta['CORE_BINARY'])
             submitted = st.form_submit_button("분석 실행")
 
