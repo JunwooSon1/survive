@@ -179,55 +179,59 @@ def delete_dialog(rid, title):
 # ── 모델 설명 모달창 ──
 @st.dialog("이 프로그램에 대해", width="large")
 def about_dialog():
-    st.markdown("#### 이 프로그램이 하는 일")
-    st.write(
-        "결측치(빈칸)와 중도절단(추적관찰 중 사건 발생 여부를 끝까지 보지 못한 환자)이 섞인 "
-        "유방암 임상 데이터를 입력받아, 자동으로 결측치를 보정한 뒤 (1) 개별 환자의 위험도를 "
-        "예측하거나 (2) 특정 치료가 생존에 유의미한 영향을 주는지 통계적으로 검정합니다."
-    )
+    tab_overview, tab_engine1, tab_engine2 = st.tabs(["전체 개요", "Engine1 (예측)", "Engine2 (검정)"])
 
-    st.markdown("#### 결측치는 어떻게 처리하나요?")
-    st.write(
-        "**Masked Autoencoder**(마스킹 오토인코더)라는 신경망을 사용합니다. 학습 단계에서 "
-        "일부러 값을 가려놓고, 나머지 관측된 값들만으로 그 가려진 값을 복원하도록 훈련시켰어요. "
-        "업로드한 데이터에 빈칸이 있으면 이 학습된 패턴으로 값을 채운 뒤 분석합니다 — 단순 평균 "
-        "대체보다 변수 간 상관관계를 반영해서 채웁니다."
-    )
+    with tab_overview:
+        st.write(
+            "결측치(빈칸)와 중도절단(추적관찰 중 사건 발생 여부를 끝까지 보지 못한 환자)이 섞인 "
+            "유방암 임상 데이터를 입력받아, 자동으로 결측치를 보정한 뒤 (1) 개별 환자의 위험도를 "
+            "예측하거나 (2) 특정 치료가 생존에 유의미한 영향을 주는지 통계적으로 검정합니다."
+        )
+        st.markdown("**결측치는 어떻게 처리하나요?**")
+        st.write(
+            "Masked Autoencoder(마스킹 오토인코더)라는 신경망을 사용합니다. 학습 단계에서 "
+            "일부러 값을 가려놓고, 나머지 관측된 값들만으로 그 가려진 값을 복원하도록 훈련시켰어요. "
+            "업로드한 데이터에 빈칸이 있으면 이 학습된 패턴으로 값을 채운 뒤 분석합니다 — 단순 평균 "
+            "대체보다 변수 간 상관관계를 반영해서 채웁니다."
+        )
+        st.markdown("**중도절단은 어떻게 처리하나요?**")
+        st.write(
+            "일반적인 분류·회귀 모델과 달리, 두 엔진 모두 '이 시점까지 사건이 안 일어났다'는 정보 "
+            "자체를 계산에 직접 반영합니다. 즉 끝까지 추적관찰되지 않은 환자도 정보로 활용하고, "
+            "버리지 않습니다."
+        )
+        st.markdown("**알아두면 좋은 한계**")
+        st.write(
+            "- 임상변수 16개(METABRIC 유방암 스키마)에 맞춰 학습돼서, 다른 질환·기관 데이터엔 "
+            "그대로 적용할 수 없어요.\n"
+            "- 결측 처리 방식은 완전무작위결측(MCAR) 상황을 가정하고 검증됐어요.\n"
+            "- Engine2의 비교 가능한 치료변수는 화학·호르몬·방사선치료 3개로 제한돼 있어요."
+        )
 
-    st.markdown("#### 중도절단은 어떻게 처리하나요?")
-    st.write(
-        "일반적인 분류·회귀 모델과 달리, 두 엔진 모두 **'이 시점까지 사건이 안 일어났다'는 정보 "
-        "자체를 계산에 직접 반영**합니다. 즉 끝까지 추적관찰되지 않은 환자도 정보로 활용하고, "
-        "버리지 않습니다."
-    )
+    with tab_engine1:
+        st.write(
+            "**구조**: Masked Autoencoder로 임상변수 16개를 8차원 잠재벡터로 압축(결측치 복원을 "
+            "동시에 수행) → 이 잠재벡터를 DeepHit(이산시간 생존분석 신경망)에 입력해서, 지정한 "
+            "시점(12/36/60/120개월)의 사망 확률(위험도)을 계산합니다."
+        )
+        st.write("**성능**: 검증 데이터 기준 C-index(순위 예측 정확도) 약 0.63 (0.5=무작위 수준, 1.0=완벽 예측).")
+        st.write(
+            "**반사실적 치료효과 추정**: 치료 변수를 인위적으로 0/1로 바꿔 넣어 그 차이를 "
+            "'잠재적 치료효과'로 해석할 수 있게 만들어뒀지만, 측정되지 않은 교란변수가 있으면 "
+            "부정확할 수 있어 참고용입니다."
+        )
 
-    st.markdown("#### Engine1 — 개별 위험도 예측")
-    st.write(
-        "**구조**: Masked Autoencoder로 임상변수 16개를 8차원 잠재벡터로 압축(결측치 복원을 "
-        "동시에 수행) → 이 잠재벡터를 **DeepHit**(이산시간 생존분석 신경망)에 입력해서, 지정한 "
-        "시점(12/36/60/120개월)의 사망 확률(위험도)을 계산합니다.\n\n"
-        "**성능**: 검증 데이터 기준 C-index(순위 예측 정확도) 약 0.63 (0.5=무작위 수준, 1.0=완벽 예측).\n\n"
-        "**참고**: 치료 변수를 인위적으로 0/1로 바꿔 넣어 그 차이를 '잠재적 치료효과'로 해석할 "
-        "수 있게 만들어뒀지만, 측정되지 않은 교란변수가 있으면 부정확할 수 있어 참고용입니다."
-    )
-
-    st.markdown("#### Engine2 — 치료 효과 유의성 검정")
-    st.write(
-        "**구조**: **Cox 비례위험모형**(전통적인 생존분석 통계기법, 딥러닝 아님) — 화학·호르몬·"
-        "방사선 치료 중 하나를 선택하면, 그 치료를 받은 그룹과 안 받은 그룹의 **위험비(HR)**와 "
-        "**유의확률(p-value)**을 계산합니다.\n\n"
-        "**해석**: HR<1이면 위험 감소, HR>1이면 위험 증가 방향. p<0.05면 이 데이터에서 우연으로 "
-        "보기 어려운 차이, p≥0.05면 이 표본만으로는 확신하기 어렵다는 뜻입니다 (효과가 없다고 "
-        "확정하는 게 아닙니다)."
-    )
-
-    st.markdown("#### 알아두면 좋은 한계")
-    st.write(
-        "- Engine1은 METABRIC 유방암 임상변수 16개 스키마에 맞춰 학습돼서, 다른 질환·기관 "
-        "데이터엔 그대로 적용할 수 없어요.\n"
-        "- 결측 처리 방식은 완전무작위결측(MCAR) 상황을 가정하고 검증됐어요.\n"
-        "- Engine2의 비교 가능한 치료변수는 화학·호르몬·방사선치료 3개로 제한돼 있어요."
-    )
+    with tab_engine2:
+        st.write(
+            "**구조**: Cox 비례위험모형(전통적인 생존분석 통계기법, 딥러닝 아님) — 화학·호르몬·"
+            "방사선 치료 중 하나를 선택하면, 그 치료를 받은 그룹과 안 받은 그룹의 위험비(HR)와 "
+            "유의확률(p-value)을 계산합니다."
+        )
+        st.write(
+            "**해석**: HR<1이면 위험 감소, HR>1이면 위험 증가 방향. p<0.05면 이 데이터에서 우연으로 "
+            "보기 어려운 차이, p≥0.05면 이 표본만으로는 확신하기 어렵다는 뜻입니다 (효과가 없다고 "
+            "확정하는 게 아닙니다)."
+        )
 
     if st.button("닫기", key="close_about_dialog", use_container_width=True):
         st.rerun()
@@ -482,16 +486,25 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
 
     # ── 범주형 인코딩 (학습 시 매핑 그대로 재사용) ──
     encoded_df = user_df.copy()
-    unseen_flag = False
+    unseen_count = 0
     for col in CORE_CATEGORICAL:
+        was_present = user_df[col].notna()
         encoded_df[col] = encoded_df[col].map(encoders[col])
-        if encoded_df[col].isna().any():
-            unseen_flag = True
+        became_na = encoded_df[col].isna()
+        unseen_count += int((was_present & became_na).sum())
+    original_na_count = int(user_df[CORE_COLS].isna().sum().sum())
+    total_missing = original_na_count + unseen_count
+    total_cells = len(user_df) * len(CORE_COLS)
 
     submitted = False
     lines = [f"스키마 확인 완료 — {len(user_df)}명 데이터 로드됐어요."]
-    if unseen_flag:
-        lines.append("⚠️ 일부 범주형 값이 학습 데이터에 없던 값이라 결측으로 처리했어요.")
+    if total_missing > 0:
+        detail_parts = []
+        if original_na_count > 0:
+            detail_parts.append(f"원래 비어있던 값 {original_na_count}개")
+        if unseen_count > 0:
+            detail_parts.append(f"학습 데이터에 없던 범주형 값 {unseen_count}개")
+        lines.append(f"⚠️ 전체 {total_cells}개 셀 중 {' + '.join(detail_parts)} = 총 {total_missing}개를 자동으로 채워서 분석했어요.")
     if st.session_state.get('last_result', {}).get('file_id') == up_file_id:
         lines.append("💡 아래에서 조건을 바꾸고 '분석 실행'을 다시 누르면 같은 데이터로 재분석할 수 있어요.")
     lines.append("어떤 걸 도와드릴까요?")
@@ -613,7 +626,8 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
             display_cols = [c for c in result_df.columns if '위험도' in c or c in CORE_COLS[:3]]
             min_risk = st.slider("질병사망 위험도 이 값 이상만 보기", 0.0, 1.0, 0.0, 0.05, key="risk_filter_slider")
             filtered_result_df = result_df[result_df['질병사망_위험도'] >= min_risk]
-            st.caption(f"{len(filtered_result_df)} / {len(result_df)}명 표시 중")
+            st.caption(f"{len(filtered_result_df)} / {len(result_df)}명 표시 중 — 각 행은 환자 한 명, "
+                       f"오른쪽 열은 예측된 시점별 사망 위험도(%)예요.")
             st.dataframe(filtered_result_df[display_cols])
             if avg_risk < 0.2:
                 interp = "양호 — 평균적으로 낮은 위험도군입니다."
@@ -646,6 +660,8 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
                            f"확신하기 어렵다는 뜻이에요 (효과가 없다고 확정하는 것도 아니에요).{small_sample_note}")
             st.info(f"[해석] {interp}")
             st.write("전체 Cox 회귀 결과:")
+            st.caption("각 행은 임상변수 하나예요. exp(coef)가 HR(위험비), p가 유의확률입니다 — "
+                       "HR>1은 위험 증가, HR<1은 위험 감소 방향, p<0.05면 통계적으로 유의해요.")
             st.dataframe(lr['summary'])
 
 # ── 사이드바에서 과거 기록을 클릭해서 볼 때 (상세 표 포함) ──
@@ -672,7 +688,8 @@ if st.session_state.get('viewing_history_record'):
                 hist_min_risk = st.slider("질병사망 위험도 이 값 이상만 보기", 0.0, 1.0, 0.0, 0.05,
                                            key=f"hist_risk_filter_{record.get('id')}")
                 hist_df = hist_df[hist_df['질병사망_위험도'] >= hist_min_risk]
-                st.caption(f"{len(hist_df)} / {len(record['detail_json'])}명 표시 중")
+                st.caption(f"{len(hist_df)} / {len(record['detail_json'])}명 표시 중 — 각 행은 환자 한 명, "
+                           f"오른쪽 열은 예측된 시점별 사망 위험도(%)예요.")
             st.dataframe(hist_df)
     else:
         st.write("**목적**: 치료 효과 유의성 검정")
@@ -698,6 +715,8 @@ if st.session_state.get('viewing_history_record'):
             st.info(f"[해석] {hist_interp}")
         if record.get('detail_json'):
             st.write("전체 Cox 회귀 결과:")
+            st.caption("각 행은 임상변수 하나예요. exp(coef)가 HR(위험비), p가 유의확률입니다 — "
+                       "HR>1은 위험 증가, HR<1은 위험 감소 방향, p<0.05면 통계적으로 유의해요.")
             st.dataframe(pd.DataFrame(record['detail_json']))
     if st.button("닫기", key="close_history_view", type="tertiary"):
         st.session_state.pop('viewing_history_record', None)
