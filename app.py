@@ -42,7 +42,7 @@ def go_home():
 st.html("""
 <style>
 section[data-testid="stSidebar"] .stMainBlockContainer {
-    padding-top: 1.2rem !important;
+    padding-top: 0.3rem !important;
 }
 [class*="st-key-histrow_"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
@@ -81,7 +81,7 @@ section[data-testid="stSidebar"] .stMainBlockContainer {
     margin-bottom: -1.1rem !important;
 }
 [class*="st-key-logo_row"] {
-    margin-bottom: 0.8rem !important;
+    margin-bottom: 0.3rem !important;
 }
 /* 팝업(⋮ 메뉴) 자체의 여백을 큰 폭으로 축소 */
 div[data-testid="stPopoverBody"] {
@@ -118,6 +118,12 @@ div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
     content: "📄";
     margin-right: 0.5rem;
     font-size: 1.3rem;
+}
+[class*="st-key-upload_card"] div[data-testid="stVerticalBlock"] {
+    gap: 0.4rem !important;
+}
+[class*="st-key-upload_card"] div[data-testid="stElementContainer"] {
+    margin-bottom: -0.5rem !important;
 }
 /* 비활성 버튼일 때 확실히 회색으로 */
 [class*="st-key-upload_card"] button:disabled {
