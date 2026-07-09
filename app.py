@@ -55,14 +55,20 @@ section[data-testid="stSidebar"] .stMainBlockContainer {
     font-size: 1.25rem !important;
     font-weight: 700 !important;
 }
+[class*="st-key-histrow_"] {
+    margin-bottom: -0.9rem !important;
+}
 [class*="st-key-new_analysis_wrap"] {
-    margin-bottom: 1.2rem !important;
+    margin-bottom: 0.1rem !important;
 }
 [class*="st-key-search_wrap"] {
     margin-bottom: 0.3rem !important;
 }
 [class*="st-key-logo_row"] {
-    margin-bottom: 1.2rem !important;
+    margin-bottom: 0.1rem !important;
+}
+[class*="st-key-logout_wrap"] {
+    margin-top: -0.9rem !important;
 }
 /* 팝업(⋮ 메뉴) 자체의 여백을 큰 폭으로 축소 */
 div[data-testid="stPopoverBody"] {
@@ -143,13 +149,14 @@ with st.sidebar:
             f'<span style="position:relative; top:2px; font-size:0.95rem;">&#9993;</span>'
             f'<span>{st.user.email}</span></div>'
         )
-        st.button("로그아웃", on_click=st.logout)
+        with st.container(key="logout_wrap"):
+            st.button("로그아웃", on_click=st.logout)
     else:
         st.info("로그인하면 분석 기록이 영구 저장됩니다.")
         st.button("Google로 로그인", on_click=st.login)
 
     st.markdown("<hr style='border:none; border-top:1px solid #E7E3D8; margin:0.7rem 0;'>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:1.1rem; font-weight:700; text-align:left;'>최근 분석 기록</div>",
+    st.markdown("<div style='font-size:1.1rem; font-weight:700; text-align:left; margin-bottom:0.1rem;'>최근 분석 기록</div>",
                 unsafe_allow_html=True)
 
     def render_history_item(record, editable_db=False):
