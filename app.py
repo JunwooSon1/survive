@@ -40,6 +40,9 @@ def go_home():
 # ── 사이드바 여백 미세조정용 CSS (key 기반 정밀 타겟팅) ──
 st.html("""
 <style>
+section[data-testid="stSidebar"] .stMainBlockContainer {
+    padding-top: 1.2rem !important;
+}
 [class*="st-key-histrow_"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
 }
@@ -49,37 +52,36 @@ st.html("""
 [class*="st-key-histrow_"] .stButton button {
     padding-left: 0 !important;
     justify-content: flex-start !important;
-    font-size: 1.15rem !important;
+    font-size: 1.25rem !important;
     font-weight: 700 !important;
-}
-[class*="st-key-new_analysis_wrap"] button,
-[class*="st-key-search_wrap"] button {
-    justify-content: flex-start !important;
-    padding-left: 0.4rem !important;
 }
 [class*="st-key-new_analysis_wrap"], [class*="st-key-search_wrap"] {
     margin-top: -0.6rem !important;
     margin-bottom: -1.1rem !important;
+}
+[class*="st-key-logo_row"] {
+    margin-bottom: -0.4rem !important;
 }
 </style>
 """)
 
 # ── 사이드바: 로고+이름, 새 분석/검색, 로그인 정보, 최근 분석 기록 ──
 with st.sidebar:
-    st.markdown("""
-    <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.1rem;">
-        <svg width="26" height="26" viewBox="0 0 170 170" style="flex-shrink:0;">
-            <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
-            <g transform="translate(38,60)" fill="none" stroke-linecap="round">
-              <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
-              <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
-            </g>
-        </svg>
-        <div style="font-family:sans-serif; font-weight:700; font-size:1.2rem; line-height:1;">
-            <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
+    with st.container(key="logo_row"):
+        st.markdown("""
+        <div style="display:flex; align-items:center; justify-content:center; gap:0.3rem; margin-bottom:0.1rem;">
+            <svg width="26" height="26" viewBox="0 0 170 170" style="flex-shrink:0;">
+                <path fill="#CC785C" d="M 98.0 24.5 L 130.9 43.5 Q 143.9 51.0 143.9 66.0 L 143.9 104.0 Q 143.9 119.0 130.9 126.5 L 98.0 145.5 Q 85.0 153.0 72.0 145.5 L 39.1 126.5 Q 26.1 119.0 26.1 104.0 L 26.1 66.0 Q 26.1 51.0 39.1 43.5 L 72.0 24.5 Q 85.0 17.0 98.0 24.5 Z"/>
+                <g transform="translate(38,60)" fill="none" stroke-linecap="round">
+                  <path d="M 0 50 Q 35.0 4.5 74.3 25.07" stroke="#FAF9F5" stroke-width="7"/>
+                  <path d="M 74.3 25.07 Q 85.0 30.5 100 50" stroke="#FAF9F5" stroke-width="6" stroke-dasharray="2.2 10.51" stroke-dashoffset="2.2"/>
+                </g>
+            </svg>
+            <div style="font-family:sans-serif; font-weight:700; font-size:1.2rem; line-height:1;">
+                <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     with st.container(key="new_analysis_wrap"):
         if st.button("새 분석", key="new_analysis_btn", icon=":material/add:",
@@ -102,11 +104,11 @@ with st.sidebar:
 
     if IS_LOGGED_IN:
         st.markdown(
-            f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.2rem;'>{st.user.name}</div>",
+            f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.1rem;'>{st.user.name}</div>",
             unsafe_allow_html=True,
         )
         st.html(
-            f'<div style="display:flex; align-items:baseline; gap:0.35rem; margin-bottom:0.4rem;">'
+            f'<div style="display:flex; align-items:baseline; gap:0.35rem; margin-bottom:0.1rem;">'
             f'<span style="position:relative; top:2px; font-size:0.95rem;">&#9993;</span>'
             f'<span>{st.user.email}</span></div>'
         )
