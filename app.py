@@ -104,7 +104,6 @@ div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
     background-color: #F0EEE5 !important;
     border-radius: 12px !important;
     padding: 1rem !important;
-    max-width: 260px;
 }
 [class*="st-key-upload_card"] div[data-testid="stFileUploaderDropzone"] {
     background-color: transparent !important;
