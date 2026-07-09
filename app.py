@@ -43,31 +43,17 @@ st.html("""
 section[data-testid="stSidebar"] .stMainBlockContainer {
     padding-top: 1.2rem !important;
 }
-/* 사이드바 폭 축소 */
-[data-testid="stSidebar"][aria-expanded="true"] {
-    min-width: 260px !important;
-    max-width: 260px !important;
-}
 [class*="st-key-histrow_"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
 }
 [class*="st-key-histrow_"] [data-testid="stColumn"]:first-of-type {
     padding-left: 0 !important;
 }
-[class*="st-key-histrow_"] .stButton button,
-[class*="st-key-histrow_"] .stButton button p,
-[class*="st-key-histrow_"] .stButton button div {
+[class*="st-key-histrow_"] .stButton button {
     padding-left: 0 !important;
     justify-content: flex-start !important;
-    font-size: 2rem !important;
-    font-weight: 800 !important;
-}
-[class*="st-key-new_analysis_wrap"] button,
-[class*="st-key-new_analysis_wrap"] button p,
-[class*="st-key-search_wrap"] button,
-[class*="st-key-search_wrap"] button p {
-    font-size: 1.6rem !important;
-    font-weight: 800 !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
 }
 [class*="st-key-new_analysis_wrap"], [class*="st-key-search_wrap"] {
     margin-top: -0.6rem !important;
