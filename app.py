@@ -43,21 +43,38 @@ st.html("""
 section[data-testid="stSidebar"] .stMainBlockContainer {
     padding-top: 1.2rem !important;
 }
+/* 사이드바 폭 축소 */
+[data-testid="stSidebar"][aria-expanded="true"] {
+    min-width: 260px !important;
+    max-width: 260px !important;
+}
 [class*="st-key-histrow_"] div[data-testid="stHorizontalBlock"] {
     gap: 0.2rem !important;
 }
 [class*="st-key-histrow_"] [data-testid="stColumn"]:first-of-type {
     padding-left: 0 !important;
 }
-[class*="st-key-histrow_"] .stButton button {
+[class*="st-key-histrow_"] .stButton button,
+[class*="st-key-histrow_"] .stButton button p,
+[class*="st-key-histrow_"] .stButton button div {
     padding-left: 0 !important;
     justify-content: flex-start !important;
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+}
+[class*="st-key-new_analysis_wrap"] button,
+[class*="st-key-new_analysis_wrap"] button p,
+[class*="st-key-search_wrap"] button,
+[class*="st-key-search_wrap"] button p {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
 }
 [class*="st-key-new_analysis_wrap"], [class*="st-key-search_wrap"] {
     margin-top: -0.6rem !important;
     margin-bottom: -1.1rem !important;
+}
+[class*="st-key-logo_row"] {
+    margin-bottom: 1.2rem !important;
 }
 /* 팝업(⋮ 메뉴) 자체의 여백을 큰 폭으로 축소 */
 div[data-testid="stPopoverBody"] {
