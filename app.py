@@ -118,6 +118,14 @@ div[data-testid="stPopoverBody"] .stButton button {
 div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
     gap: 0.1rem !important;
 }
+[class*="st-key-about_btn"] button {
+    border-radius: 50% !important;
+    width: 2.4rem !important;
+    height: 2.4rem !important;
+    padding: 0 !important;
+    color: #9B9B9B !important;
+    border-color: #E7E3D8 !important;
+}
 [class*="st-key-upload_card"] {
     background-color: #F0EEE5 !important;
     border-radius: 12px !important;
@@ -167,6 +175,62 @@ def delete_dialog(rid, title):
     with col2:
         if st.button("아니오", key=f"dialog_delno_{rid}", use_container_width=True):
             st.rerun()
+
+# ── 모델 설명 모달창 ──
+@st.dialog("이 프로그램에 대해", width="large")
+def about_dialog():
+    st.markdown("#### 이 프로그램이 하는 일")
+    st.write(
+        "결측치(빈칸)와 중도절단(추적관찰 중 사건 발생 여부를 끝까지 보지 못한 환자)이 섞인 "
+        "유방암 임상 데이터를 입력받아, 자동으로 결측치를 보정한 뒤 (1) 개별 환자의 위험도를 "
+        "예측하거나 (2) 특정 치료가 생존에 유의미한 영향을 주는지 통계적으로 검정합니다."
+    )
+
+    st.markdown("#### 결측치는 어떻게 처리하나요?")
+    st.write(
+        "**Masked Autoencoder**(마스킹 오토인코더)라는 신경망을 사용합니다. 학습 단계에서 "
+        "일부러 값을 가려놓고, 나머지 관측된 값들만으로 그 가려진 값을 복원하도록 훈련시켰어요. "
+        "업로드한 데이터에 빈칸이 있으면 이 학습된 패턴으로 값을 채운 뒤 분석합니다 — 단순 평균 "
+        "대체보다 변수 간 상관관계를 반영해서 채웁니다."
+    )
+
+    st.markdown("#### 중도절단은 어떻게 처리하나요?")
+    st.write(
+        "일반적인 분류·회귀 모델과 달리, 두 엔진 모두 **'이 시점까지 사건이 안 일어났다'는 정보 "
+        "자체를 계산에 직접 반영**합니다. 즉 끝까지 추적관찰되지 않은 환자도 정보로 활용하고, "
+        "버리지 않습니다."
+    )
+
+    st.markdown("#### Engine1 — 개별 위험도 예측")
+    st.write(
+        "**구조**: Masked Autoencoder로 임상변수 16개를 8차원 잠재벡터로 압축(결측치 복원을 "
+        "동시에 수행) → 이 잠재벡터를 **DeepHit**(이산시간 생존분석 신경망)에 입력해서, 지정한 "
+        "시점(12/36/60/120개월)의 사망 확률(위험도)을 계산합니다.\n\n"
+        "**성능**: 검증 데이터 기준 C-index(순위 예측 정확도) 약 0.63 (0.5=무작위 수준, 1.0=완벽 예측).\n\n"
+        "**참고**: 치료 변수를 인위적으로 0/1로 바꿔 넣어 그 차이를 '잠재적 치료효과'로 해석할 "
+        "수 있게 만들어뒀지만, 측정되지 않은 교란변수가 있으면 부정확할 수 있어 참고용입니다."
+    )
+
+    st.markdown("#### Engine2 — 치료 효과 유의성 검정")
+    st.write(
+        "**구조**: **Cox 비례위험모형**(전통적인 생존분석 통계기법, 딥러닝 아님) — 화학·호르몬·"
+        "방사선 치료 중 하나를 선택하면, 그 치료를 받은 그룹과 안 받은 그룹의 **위험비(HR)**와 "
+        "**유의확률(p-value)**을 계산합니다.\n\n"
+        "**해석**: HR<1이면 위험 감소, HR>1이면 위험 증가 방향. p<0.05면 이 데이터에서 우연으로 "
+        "보기 어려운 차이, p≥0.05면 이 표본만으로는 확신하기 어렵다는 뜻입니다 (효과가 없다고 "
+        "확정하는 게 아닙니다)."
+    )
+
+    st.markdown("#### 알아두면 좋은 한계")
+    st.write(
+        "- Engine1은 METABRIC 유방암 임상변수 16개 스키마에 맞춰 학습돼서, 다른 질환·기관 "
+        "데이터엔 그대로 적용할 수 없어요.\n"
+        "- 결측 처리 방식은 완전무작위결측(MCAR) 상황을 가정하고 검증됐어요.\n"
+        "- Engine2의 비교 가능한 치료변수는 화학·호르몬·방사선치료 3개로 제한돼 있어요."
+    )
+
+    if st.button("닫기", key="close_about_dialog", use_container_width=True):
+        st.rerun()
 
 # ── 이름 변경 모달창 ──
 @st.dialog("이름 변경")
@@ -318,11 +382,16 @@ with st.sidebar:
         else:
             st.caption("아직 분석 기록이 없습니다.")
 
-st.markdown("""
-<div style="font-family:sans-serif; font-weight:700; font-size:2.6rem; line-height:1.1; margin-bottom:0.2rem;">
-  <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
-</div>
-""", unsafe_allow_html=True)
+col_title, col_info = st.columns([10, 1])
+with col_title:
+    st.markdown("""
+    <div style="font-family:sans-serif; font-weight:700; font-size:2.6rem; line-height:1.1; margin-bottom:0.2rem;">
+      <span style="color:#CC785C;">surv</span><span style="color:#9B9B9B;">flow</span>
+    </div>
+    """, unsafe_allow_html=True)
+with col_info:
+    if st.button("", icon=":material/info:", key="about_btn", help="이 프로그램에 대해"):
+        about_dialog()
 st.caption("결측치와 중도절단, 자동으로 분석합니다")
 
 # ── 저장된 메타데이터/모델 로드 ──
