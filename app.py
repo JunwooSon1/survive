@@ -55,9 +55,11 @@ section[data-testid="stSidebar"] .stMainBlockContainer {
     font-size: 1.25rem !important;
     font-weight: 700 !important;
 }
-[class*="st-key-new_analysis_wrap"], [class*="st-key-search_wrap"] {
-    margin-top: -0.6rem !important;
-    margin-bottom: -1.1rem !important;
+[class*="st-key-new_analysis_wrap"] {
+    margin-bottom: 1.2rem !important;
+}
+[class*="st-key-search_wrap"] {
+    margin-bottom: 0.3rem !important;
 }
 [class*="st-key-logo_row"] {
     margin-bottom: 1.2rem !important;
@@ -296,30 +298,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.chat_message("assistant"):
-    st.write("임상 데이터 CSV를 업로드해주세요.")
-    new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed",
-                                   key=f"uploader_{st.session_state.get('uploader_key_version', 0)}")
-    if new_upload is not None and st.session_state.get('uploaded_file_id') != new_upload.file_id:
-        # 새 파일이 들어온 시점에 내용을 세션에 통째로 복사 -> 이후엔 위젯이 아니라 이 값만 참조
-        st.session_state['uploaded_bytes'] = new_upload.getvalue()
-        st.session_state['uploaded_name'] = new_upload.name
-        st.session_state['uploaded_file_id'] = new_upload.file_id
-        st.session_state['confirmed_file_id'] = None  # 새 파일이면 확인 상태 초기화
+st.write("임상 데이터 CSV를 업로드해주세요.")
+new_upload = st.file_uploader("임상 데이터 CSV 업로드", type='csv', label_visibility="collapsed",
+                               key=f"uploader_{st.session_state.get('uploader_key_version', 0)}")
+if new_upload is not None and st.session_state.get('uploaded_file_id') != new_upload.file_id:
+    # 새 파일이 들어온 시점에 내용을 세션에 통째로 복사 -> 이후엔 위젯이 아니라 이 값만 참조
+    st.session_state['uploaded_bytes'] = new_upload.getvalue()
+    st.session_state['uploaded_name'] = new_upload.name
+    st.session_state['uploaded_file_id'] = new_upload.file_id
+    st.session_state['confirmed_file_id'] = None  # 새 파일이면 확인 상태 초기화
 
-    up_file_id = st.session_state.get('uploaded_file_id')
-    up_name = st.session_state.get('uploaded_name')
+up_file_id = st.session_state.get('uploaded_file_id')
+up_name = st.session_state.get('uploaded_name')
 
-    if up_file_id:
-        if st.session_state.get('confirmed_file_id') != up_file_id:
-            if st.button("다음 →", key=f"proceed_{up_file_id}"):
-                st.session_state['confirmed_file_id'] = up_file_id
-                st.rerun()
-        else:
-            if st.button("🔄 같은 데이터로 새 분석 시작", key=f"restart_{up_file_id}"):
-                st.session_state['confirmed_file_id'] = None
-                st.session_state.pop('last_result', None)
-                st.rerun()
+if up_file_id:
+    if st.session_state.get('confirmed_file_id') != up_file_id:
+        if st.button("다음 →", key=f"proceed_{up_file_id}"):
+            st.session_state['confirmed_file_id'] = up_file_id
+            st.rerun()
+    else:
+        if st.button("🔄 같은 데이터로 새 분석 시작", key=f"restart_{up_file_id}"):
+            st.session_state['confirmed_file_id'] = None
+            st.session_state.pop('last_result', None)
+            st.rerun()
 
 if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     import io
