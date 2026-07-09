@@ -486,7 +486,7 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
         st.session_state['last_result'] = {
             'type': '효과비교', 'file_id': up_file_id, 'compare_col': compare_col,
             'hr': hr, 'p': p, 'summary': cph.summary[['coef', 'exp(coef)', 'p']],
-            'missing_note': missing_note,
+            'missing_note': missing_note, 'n_patients': len(user_df),
         }
 
         save_key = f"saved_{up_file_id}_효과비교_{compare_col}"
@@ -539,9 +539,14 @@ if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
                     interp = (f"이 데이터에서는 **{compare_col}을(를) 받은 환자군이 안 받은 환자군보다 사망 위험이 "
                                f"더 높게** 나타났고, 이 차이가 우연으로 보기엔 통계적으로 뚜렷했어요 (p<0.05).")
             else:
+                n_patients = lr.get('n_patients')
+                small_sample_note = ""
+                if n_patients is not None and n_patients < 30:  # 표본크기 30명 미만이면 실제로 작은 표본으로 판단(규칙 기반)
+                    small_sample_note = (f" 특히 지금 표본이 **{n_patients}명**으로 적은 편이라, "
+                                          f"이 결과가 우연히 그렇게 나왔을 가능성도 같이 감안해야 해요.")
                 interp = (f"**{compare_col}을(를) 받은 환자군과 안 받은 환자군 사이에 뚜렷한 생존 차이가 "
                            f"확인되지 않았어요** (p≥0.05). 즉 이 표본만으로는 '{compare_col}이(가) 실제로 효과가 있다'고 "
-                           f"확신하기 어렵다는 뜻이에요 (효과가 없다고 확정하는 것도 아니고, 표본이 더 크면 결과가 달라질 수 있어요).")
+                           f"확신하기 어렵다는 뜻이에요 (효과가 없다고 확정하는 것도 아니에요).{small_sample_note}")
             st.info(f"[해석] {interp}")
             st.write("전체 Cox 회귀 결과:")
             st.dataframe(lr['summary'])
@@ -557,14 +562,37 @@ if st.session_state.get('viewing_history_record'):
         avg_risk = record.get('avg_risk')
         if avg_risk is not None:
             st.write(f"**평균 질병사망 위험도**: {avg_risk:.1%}")
+            if avg_risk < 0.2:
+                hist_interp = "양호 — 평균적으로 낮은 위험도군입니다."
+            elif avg_risk < 0.4:
+                hist_interp = "중간 — 주의 관찰이 필요한 수준입니다."
+            else:
+                hist_interp = "높음 — 위험도가 높은 환자 비중이 큽니다."
+            st.info(f"[해석] 평균 질병사망 위험도 {avg_risk:.1%} → {hist_interp}")
         if record.get('detail_json'):
             st.dataframe(pd.DataFrame(record['detail_json']))
     else:
         st.write("**목적**: 치료 효과 유의성 비교")
         st.write(f"**환자 수**: {record.get('n_patients')}")
-        st.write(f"**비교 변수**: {record.get('hr_variable')}")
-        if record.get('hr_value') is not None:
-            st.write(f"**HR**: {record.get('hr_value'):.3f}, **p-value**: {record.get('p_value'):.4f}")
+        compare_col = record.get('hr_variable')
+        st.write(f"**비교 변수**: {compare_col}")
+        hr, p = record.get('hr_value'), record.get('p_value')
+        if hr is not None and p is not None:
+            st.write(f"**HR**: {hr:.3f}, **p-value**: {p:.4f}")
+            if p < 0.05:
+                direction = "더 낮게" if hr < 1 else "더 높게"
+                hist_interp = (f"이 데이터에서는 **{compare_col}을(를) 받은 환자군이 안 받은 환자군보다 사망 위험이 "
+                               f"{direction}** 나타났고, 이 차이가 우연으로 보기엔 통계적으로 뚜렷했어요 (p<0.05).")
+            else:
+                n_patients = record.get('n_patients')
+                small_sample_note = ""
+                if n_patients is not None and n_patients < 30:
+                    small_sample_note = (f" 특히 지금 표본이 **{n_patients}명**으로 적은 편이라, "
+                                          f"이 결과가 우연히 그렇게 나왔을 가능성도 같이 감안해야 해요.")
+                hist_interp = (f"**{compare_col}을(를) 받은 환자군과 안 받은 환자군 사이에 뚜렷한 생존 차이가 "
+                               f"확인되지 않았어요** (p≥0.05). 즉 이 표본만으로는 '{compare_col}이(가) 실제로 효과가 있다'고 "
+                               f"확신하기 어렵다는 뜻이에요 (효과가 없다고 확정하는 것도 아니에요).{small_sample_note}")
+            st.info(f"[해석] {hist_interp}")
         if record.get('detail_json'):
             st.write("전체 Cox 회귀 결과:")
             st.dataframe(pd.DataFrame(record['detail_json']))
