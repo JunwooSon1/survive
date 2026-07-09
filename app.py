@@ -58,17 +58,12 @@ section[data-testid="stSidebar"] .stMainBlockContainer {
 [class*="st-key-histrow_"] {
     margin-bottom: -0.9rem !important;
 }
-[class*="st-key-new_analysis_wrap"] {
-    margin-bottom: 0.1rem !important;
-}
-[class*="st-key-search_wrap"] {
-    margin-bottom: 0.3rem !important;
+[class*="st-key-new_analysis_wrap"], [class*="st-key-search_wrap"] {
+    margin-top: -0.6rem !important;
+    margin-bottom: -1.1rem !important;
 }
 [class*="st-key-logo_row"] {
-    margin-bottom: 0.1rem !important;
-}
-[class*="st-key-logout_wrap"] {
-    margin-top: -0.9rem !important;
+    margin-bottom: 0.8rem !important;
 }
 /* 팝업(⋮ 메뉴) 자체의 여백을 큰 폭으로 축소 */
 div[data-testid="stPopoverBody"] {
@@ -141,11 +136,11 @@ with st.sidebar:
 
     if IS_LOGGED_IN:
         st.markdown(
-            f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0.1rem;'>{st.user.name}</div>",
+            f"<div style='font-size:1.3rem; font-weight:700; color:#3D3929; margin-bottom:0rem;'>{st.user.name}</div>",
             unsafe_allow_html=True,
         )
         st.html(
-            f'<div style="display:flex; align-items:baseline; gap:0.35rem; margin-bottom:0.1rem;">'
+            f'<div style="display:flex; align-items:baseline; gap:0.35rem; margin-bottom:0.8rem;">'
             f'<span style="position:relative; top:2px; font-size:0.95rem;">&#9993;</span>'
             f'<span>{st.user.email}</span></div>'
         )
