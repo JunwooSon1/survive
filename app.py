@@ -59,11 +59,37 @@ section[data-testid="stSidebar"] .stMainBlockContainer {
     margin-top: -0.6rem !important;
     margin-bottom: -1.1rem !important;
 }
-[class*="st-key-logo_row"] {
-    margin-bottom: -0.4rem !important;
+/* 팝업(⋮ 메뉴) 자체의 여백을 큰 폭으로 축소 */
+div[data-testid="stPopoverBody"] {
+    padding: 0.3rem !important;
+    min-width: 0 !important;
+    width: 160px !important;
+}
+div[data-testid="stPopoverBody"] .stButton {
+    margin: 0 !important;
+}
+div[data-testid="stPopoverBody"] .stButton button {
+    padding: 0.2rem 0.4rem !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+}
+div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
+    gap: 0.1rem !important;
 }
 </style>
 """)
+
+# ── 이름 변경 모달창 ──
+@st.dialog("이름 변경")
+def rename_dialog(rid, current_title):
+    new_title = st.text_input("새 이름", value=current_title, key=f"dialog_rename_{rid}",
+                                label_visibility="collapsed")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("저장", key=f"dialog_save_{rid}", use_container_width=True, type="primary"):
+            supabase.table("analysis_history").update({"title": new_title}).eq("id", rid).execute()
+            st.session_state['history_ui_version'] = st.session_state.get('history_ui_version', 0) + 1
+            st.rerun()
 
 # ── 사이드바: 로고+이름, 새 분석/검색, 로그인 정보, 최근 분석 기록 ──
 with st.sidebar:
@@ -148,18 +174,9 @@ with st.sidebar:
                             if st.button("아니오", key=f"confirmno_{rid}", type="tertiary"):
                                 st.session_state[f"confirming_delete_{rid}"] = False
                                 st.rerun()
-                    elif st.session_state.get(f"renaming_{rid}", False):
-                        new_title = st.text_input("새 이름", value=display_title, key=f"rename_{rid}",
-                                                    label_visibility="collapsed")
-                        if st.button("저장", key=f"savebtn_{rid}", type="tertiary"):
-                            supabase.table("analysis_history").update({"title": new_title}).eq("id", rid).execute()
-                            st.session_state[f"renaming_{rid}"] = False
-                            st.session_state['history_ui_version'] = ui_v + 1  # 팝업 상태 강제 초기화
-                            st.rerun()
                     else:
                         if st.button("✏️ 이름 변경", key=f"renamebtn_{rid}", use_container_width=True, type="tertiary"):
-                            st.session_state[f"renaming_{rid}"] = True
-                            st.rerun()
+                            rename_dialog(rid, display_title)
                         if st.button("🗑 삭제", key=f"delbtn_{rid}", use_container_width=True, type="tertiary"):
                             st.session_state[f"confirming_delete_{rid}"] = True
                             st.rerun()
