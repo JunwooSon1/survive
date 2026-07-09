@@ -102,9 +102,13 @@ div[data-testid="stPopoverBody"] div[data-testid="stVerticalBlock"] {
 }
 [class*="st-key-start_analysis_box"] {
     background-color: #F0EEE5 !important;
-    border-radius: 12px !important;
+    border-radius: 0 0 12px 12px !important;
     padding: 1rem !important;
     max-width: 260px;
+    margin-top: -1rem !important;
+}
+div[data-testid="stFileUploaderDropzone"] {
+    border-radius: 12px 12px 0 0 !important;
 }
 </style>
 """)
@@ -347,10 +351,10 @@ if new_upload is not None and st.session_state.get('uploaded_file_id') != new_up
 up_file_id = st.session_state.get('uploaded_file_id')
 up_name = st.session_state.get('uploaded_name')
 
-if up_file_id and st.session_state.get('confirmed_file_id') != up_file_id:
+if st.session_state.get('confirmed_file_id') != up_file_id:
     with st.container(key="start_analysis_box"):
-        if st.button("분석 시작", key=f"proceed_{up_file_id}", icon=":material/arrow_forward:",
-                      use_container_width=True, type="primary"):
+        if st.button("분석 시작", key="proceed_btn", icon=":material/arrow_forward:",
+                      use_container_width=True, type="primary", disabled=(up_file_id is None)):
             st.session_state['confirmed_file_id'] = up_file_id
             st.rerun()
 
