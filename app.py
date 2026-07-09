@@ -115,6 +115,42 @@ def rename_dialog(rid, current_title):
             st.session_state['history_ui_version'] = st.session_state.get('history_ui_version', 0) + 1
             st.rerun()
 
+# ── 분석 검색 모달창 ──
+@st.dialog("분석 검색")
+def search_dialog():
+    query = st.text_input("검색어", key="search_dialog_query",
+                           placeholder="파일명으로 검색...", label_visibility="collapsed")
+    if query:
+        all_records = []
+        if IS_LOGGED_IN:
+            try:
+                res = (
+                    supabase.table("analysis_history")
+                    .select("*")
+                    .eq("user_email", st.user.email)
+                    .order("created_at", desc=True)
+                    .limit(50)
+                    .execute()
+                )
+                all_records = res.data or []
+            except Exception:
+                all_records = []
+        else:
+            all_records = st.session_state.get('local_history', [])
+
+        matches = [r for r in all_records
+                   if query.lower() in (r.get('title') or r.get('filename') or '').lower()]
+
+        if matches:
+            st.caption(f"{len(matches)}건 찾았어요. 원하는 항목을 선택하세요.")
+            for i, r in enumerate(matches):
+                label = r.get('title') or r.get('filename') or '(제목 없음)'
+                if st.button(label, key=f"searchresult_{r.get('id', i)}", use_container_width=True, type="tertiary"):
+                    st.session_state['viewing_history_record'] = r
+                    st.rerun()
+        else:
+            st.caption("검색 결과가 없습니다.")
+
 # ── 사이드바: 로고+이름, 새 분석/검색, 로그인 정보, 최근 분석 기록 ──
 with st.sidebar:
     with st.container(key="logo_row"):
@@ -140,15 +176,9 @@ with st.sidebar:
             st.rerun()
 
     with st.container(key="search_wrap"):
-        show_search = st.session_state.get("show_history_search", False)
         if st.button("분석 검색", key="toggle_search_btn", icon=":material/search:",
                       use_container_width=True, type="tertiary"):
-            st.session_state["show_history_search"] = not show_search
-            st.rerun()
-    search_query = ""
-    if st.session_state.get("show_history_search", False):
-        search_query = st.text_input("분석 검색", key="history_search_input",
-                                      placeholder="파일명으로 검색...", label_visibility="collapsed")
+            search_dialog()
 
     st.markdown("<hr style='border:none; border-top:1px solid #E7E3D8; margin:0.3rem 0;'>", unsafe_allow_html=True)
 
@@ -210,12 +240,6 @@ with st.sidebar:
                             st.rerun()
 
 
-    def matches_search(record):
-        if not search_query:
-            return True
-        title = (record.get('title') or record.get('filename') or '')
-        return search_query.lower() in title.lower()
-
     if IS_LOGGED_IN:
         try:
             history = (
@@ -226,25 +250,19 @@ with st.sidebar:
                 .limit(20)
                 .execute()
             )
-            filtered = [r for r in history.data if matches_search(r)] if history.data else []
-            if filtered:
-                for record in filtered:
+            if history.data:
+                for record in history.data:
                     render_history_item(record, editable_db=True)
-            elif search_query:
-                st.caption("검색 결과가 없습니다.")
             else:
                 st.caption("아직 분석 기록이 없습니다.")
         except Exception as e:
             st.caption(f"기록 조회 실패: {e}")
     else:
-        filtered_local = [r for r in st.session_state.local_history if matches_search(r)]
-        if filtered_local:
-            for i, record in enumerate(filtered_local):
+        if st.session_state.local_history:
+            for i, record in enumerate(st.session_state.local_history):
                 record.setdefault('id', f'local_{i}')
                 render_history_item(record, editable_db=False)
             st.caption("⚠ 로그인하지 않아 새로고침하면 이 기록은 사라집니다.")
-        elif search_query:
-            st.caption("검색 결과가 없습니다.")
         else:
             st.caption("아직 분석 기록이 없습니다.")
 
@@ -323,16 +341,10 @@ if new_upload is not None and st.session_state.get('uploaded_file_id') != new_up
 up_file_id = st.session_state.get('uploaded_file_id')
 up_name = st.session_state.get('uploaded_name')
 
-if up_file_id:
-    if st.session_state.get('confirmed_file_id') != up_file_id:
-        if st.button("다음 →", key=f"proceed_{up_file_id}"):
-            st.session_state['confirmed_file_id'] = up_file_id
-            st.rerun()
-    else:
-        if st.button("🔄 같은 데이터로 새 분석 시작", key=f"restart_{up_file_id}"):
-            st.session_state['confirmed_file_id'] = None
-            st.session_state.pop('last_result', None)
-            st.rerun()
+if up_file_id and st.session_state.get('confirmed_file_id') != up_file_id:
+    if st.button("분석 시작", key=f"proceed_{up_file_id}", icon=":material/arrow_forward:", type="primary"):
+        st.session_state['confirmed_file_id'] = up_file_id
+        st.rerun()
 
 if up_file_id and st.session_state.get('confirmed_file_id') == up_file_id:
     import io
